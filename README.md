@@ -19,8 +19,15 @@ server/   # Express API server with mock data & simulators
 
 2) Install dependencies
 ```
-cd server && npm i && cd ../client && npm i
+npm i
 ```
+This will install root deps. For client/server, run:
+```
+npm i --prefix server
+npm i --prefix client
+```
+
+Or just use the root command which works with the workspace structure.
 
 3) Configure environment variables
 ```
@@ -28,12 +35,17 @@ cp server/.env.example server/.env
 # Edit JWT_SECRET if desired
 ```
 
-4) Run servers
+4) Run both servers with one command
 ```
+npm run dev
+```
+
+Or run them separately:
+```
+# Terminal 1: Backend
 cd server && npm run dev
-```
-In a new terminal:
-```
+
+# Terminal 2: Frontend  
 cd client && npm run dev
 ```
 
