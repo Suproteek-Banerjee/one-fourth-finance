@@ -20,42 +20,65 @@ export default function Wallet() {
   }
 
   async function deposit() {
-    if (!amount || amount <= 0) return;
+    if (!amount || amount <= 0) {
+      toast({ title: 'Please enter a valid amount', status: 'warning' });
+      return;
+    }
     setLoading(true);
-    await fetch(`${API_URL}/wallet/deposit`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ currency, amount: Number(amount) }) });
-    toast({ title: 'Deposit successful', status: 'success' });
-    await load();
-    setAmount('');
-    setLoading(false);
+    try {
+      const res = await fetch(`${API_URL}/wallet/deposit`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ currency, amount: Number(amount) }) });
+      if (!res.ok) throw new Error('Deposit failed');
+      toast({ title: 'Deposit successful', status: 'success' });
+      await load();
+      setAmount('');
+    } catch (err) {
+      toast({ title: 'Deposit failed', status: 'error' });
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function withdraw() {
-    if (!amount || amount <= 0) return;
+    if (!amount || amount <= 0) {
+      toast({ title: 'Please enter a valid amount', status: 'warning' });
+      return;
+    }
     setLoading(true);
     try {
-      await fetch(`${API_URL}/wallet/withdraw`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ currency, amount: Number(amount) }) });
+      const res = await fetch(`${API_URL}/wallet/withdraw`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ currency, amount: Number(amount) }) });
+      if (!res.ok) throw new Error('Withdrawal failed');
       toast({ title: 'Withdrawal successful', status: 'success' });
       await load();
       setAmount('');
     } catch (err) {
-      toast({ title: 'Insufficient balance', status: 'error' });
+      toast({ title: 'Withdrawal failed - insufficient balance', status: 'error' });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   async function transfer() {
-    if (!amount || amount <= 0 || !toAddress) return;
+    if (!amount || amount <= 0) {
+      toast({ title: 'Please enter a valid amount', status: 'warning' });
+      return;
+    }
+    if (!toAddress) {
+      toast({ title: 'Please enter a recipient address', status: 'warning' });
+      return;
+    }
     setLoading(true);
     try {
-      await fetch(`${API_URL}/wallet/transfer`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ currency, amount: Number(amount), toAddress }) });
+      const res = await fetch(`${API_URL}/wallet/transfer`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ currency, amount: Number(amount), toAddress }) });
+      if (!res.ok) throw new Error('Transfer failed');
       toast({ title: 'Transfer successful', status: 'success' });
       await load();
       setAmount('');
       setToAddress('');
     } catch (err) {
-      toast({ title: 'Transfer failed', status: 'error' });
+      toast({ title: 'Transfer failed - insufficient balance', status: 'error' });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   useEffect(() => { load(); }, []);
