@@ -13,6 +13,7 @@ import insuranceRoutes from './routes/insurance.js';
 import realEstateRoutes from './routes/realEstate.js';
 import fraudRoutes from './routes/fraud.js';
 import adminRoutes from './routes/admin.js';
+import walletRoutes from './routes/wallet.js';
 
 const app = express();
 app.use(cors());
@@ -35,6 +36,7 @@ app.use('/insurance', insuranceRoutes);
 app.use('/real-estate', realEstateRoutes);
 app.use('/fraud', fraudRoutes);
 app.use('/admin', adminRoutes);
+app.use('/wallet', walletRoutes);
 
 const port = process.env.PORT || 4000;
 app.listen(port, () => {

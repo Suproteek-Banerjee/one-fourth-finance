@@ -13,6 +13,8 @@ import Insurance from './pages/Insurance.jsx';
 import RealEstate from './pages/RealEstate.jsx';
 import Fraud from './pages/Fraud.jsx';
 import Admin from './pages/Admin.jsx';
+import Wallet from './pages/Wallet.jsx';
+import Profile from './pages/Profile.jsx';
 
 function NavBar() {
   const { user, logout } = useAuth();
@@ -25,14 +27,15 @@ function NavBar() {
       {user ? (
         <>
           <Button as={Link} to="/dashboard" variant="ghost">Dashboard</Button>
+          <Button as={Link} to="/wallet" variant="ghost">Wallet</Button>
           <Button as={Link} to="/coaching" variant="ghost">Coaching</Button>
-          <Button as={Link} to="/microfinance" variant="ghost">Microfinance</Button>
-          <Button as={Link} to="/credit-risk" variant="ghost">Credit Risk</Button>
-          <Button as={Link} to="/pension" variant="ghost">Pension</Button>
+          <Button as={Link} to="/microfinance" variant="ghost">Loans</Button>
           <Button as={Link} to="/insurance" variant="ghost">Insurance</Button>
           <Button as={Link} to="/real-estate" variant="ghost">Real Estate</Button>
+          <Button as={Link} to="/pension" variant="ghost">Pension</Button>
           <Button as={Link} to="/fraud" variant="ghost">Fraud</Button>
           {user.role === 'admin' && <Button as={Link} to="/admin" variant="ghost" colorScheme="purple">Admin</Button>}
+          <Button as={Link} to="/profile" variant="ghost">Profile</Button>
           <Button ml={2} onClick={logout} colorScheme="blue">Logout</Button>
         </>
       ) : (
@@ -62,6 +65,7 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
             <Route path="/coaching" element={<ProtectedRoute><Coaching /></ProtectedRoute>} />
             <Route path="/microfinance" element={<ProtectedRoute><Microfinance /></ProtectedRoute>} />
             <Route path="/credit-risk" element={<ProtectedRoute><CreditRisk /></ProtectedRoute>} />
@@ -70,6 +74,7 @@ export default function App() {
             <Route path="/real-estate" element={<ProtectedRoute><RealEstate /></ProtectedRoute>} />
             <Route path="/fraud" element={<ProtectedRoute><Fraud /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           </Routes>
         </Box>
       </Box>
