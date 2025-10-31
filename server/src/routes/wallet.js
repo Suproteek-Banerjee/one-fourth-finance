@@ -8,7 +8,7 @@ const router = express.Router();
 router.get('/', requireAuth, (req, res) => {
   const wallet = db.cryptoWallets.find(w => w.userId === req.user.id);
   if (!wallet) {
-    const newWallet = { userId: req.user.id, address: `0x${nanoid(40)}`, balances: { USDC: 0, BTC: 0, ETH: 0 }, history: [] };
+    const newWallet = { userId: req.user.id, address: `0x${nanoid(40)}`, balances: { USDC: 0, BTC: 0, ETH: 0, SOL: 0, ADA: 0, MATIC: 0, DOT: 0 }, history: [] };
     db.cryptoWallets.push(newWallet);
     res.json(newWallet);
   } else {

@@ -40,10 +40,20 @@ export default function Profile() {
   }
 
   const portfolioValue = stats?.portfolio?.value || 0;
+  const investments = stats?.investments || [];
   const pensionBalance = stats?.pension?.balance || 0;
   const loans = stats?.loans || [];
   const policies = stats?.policies || [];
-  const totalInvested = portfolioValue + pensionBalance;
+  
+  // Calculate investment values
+  const investmentValue = investments.reduce((sum, inv) => {
+    if (inv.type === 'stock') return sum + (inv.shares * inv.currentPrice);
+    if (inv.type === 'bond') return sum + inv.amount;
+    if (inv.type === 'crypto') return sum + (inv.amount * inv.currentPrice);
+    return sum;
+  }, 0);
+  
+  const totalInvested = portfolioValue + investmentValue + pensionBalance;
   const totalDebt = loans.reduce((sum, loan) => sum + (loan.amount - (loan.funded || 0)), 0);
 
   const historyData = [

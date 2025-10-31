@@ -16,6 +16,7 @@ import Fraud from './pages/Fraud.jsx';
 import Admin from './pages/Admin.jsx';
 import Wallet from './pages/Wallet.jsx';
 import Profile from './pages/Profile.jsx';
+import Investments from './pages/Investments.jsx';
 
 function NavBar() {
   const { user, logout } = useAuth();
@@ -24,6 +25,7 @@ function NavBar() {
   
   const navLinks = user ? [
     { to: '/dashboard', label: 'Dashboard' },
+    { to: '/investments', label: 'Investments' },
     { to: '/wallet', label: 'Wallet' },
     { to: '/coaching', label: 'Coaching' },
     { to: '/microfinance', label: 'Loans' },
@@ -103,6 +105,7 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/investments" element={<ProtectedRoute><Investments /></ProtectedRoute>} />
             <Route path="/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
             <Route path="/coaching" element={<ProtectedRoute><Coaching /></ProtectedRoute>} />
             <Route path="/microfinance" element={<ProtectedRoute><Microfinance /></ProtectedRoute>} />

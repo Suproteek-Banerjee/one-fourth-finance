@@ -14,6 +14,7 @@ import realEstateRoutes from './routes/realEstate.js';
 import fraudRoutes from './routes/fraud.js';
 import adminRoutes from './routes/admin.js';
 import walletRoutes from './routes/wallet.js';
+import investmentRoutes from './routes/investments.js';
 
 const app = express();
 app.use(cors());
@@ -37,6 +38,7 @@ app.use('/real-estate', realEstateRoutes);
 app.use('/fraud', fraudRoutes);
 app.use('/admin', adminRoutes);
 app.use('/wallet', walletRoutes);
+app.use('/investments', investmentRoutes);
 
 const port = process.env.PORT || 4000;
 app.listen(port, () => {

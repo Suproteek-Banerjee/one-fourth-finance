@@ -19,7 +19,8 @@ export const db = {
   propertyHoldings: [],
   transactions: [],
   fraudAlerts: [],
-  auditLogs: []
+  auditLogs: [],
+  investments: [] // User investments in stocks, bonds, crypto
 };
 
 export function seedMockData() {
@@ -35,11 +36,20 @@ export function seedMockData() {
 
   db.users.push(admin, investor, borrower);
 
-  const investorWallet = { userId: investor.id, address: '0xINVESTOR', balances: { USDC: 1200, BTC: 0.05, ETH: 0.7 }, history: [] };
+  const investorWallet = { userId: investor.id, address: '0xINVESTOR', balances: { USDC: 1200, BTC: 0.05, ETH: 0.7, SOL: 0, ADA: 0, MATIC: 0, DOT: 0 }, history: [] };
   db.cryptoWallets.push(investorWallet);
 
   const investorPension = { id: nanoid(), userId: investor.id, balance: 5000, monthlyContribution: 200, apy: 0.08, history: [] };
   db.pensionAccounts.push(investorPension);
+
+  // Seed some initial investments
+  const investorInvestments = [
+    { id: nanoid(), userId: investor.id, type: 'stock', symbol: 'AAPL', shares: 5, avgPrice: 150, currentPrice: 175, ts: Date.now() - 86400000 },
+    { id: nanoid(), userId: investor.id, type: 'stock', symbol: 'MSFT', shares: 3, avgPrice: 300, currentPrice: 380, ts: Date.now() - 86400000 },
+    { id: nanoid(), userId: investor.id, type: 'bond', symbol: 'US10Y', amount: 5000, yield: 0.045, ts: Date.now() - 172800000 },
+    { id: nanoid(), userId: investor.id, type: 'crypto', symbol: 'BTC', amount: 0.05, avgPrice: 45000, currentPrice: 45000, ts: Date.now() - 259200000 }
+  ];
+  db.investments.push(...investorInvestments);
 
   const defaultProducts = [
     { id: nanoid(), name: 'OFF Basic Health', premiumBase: 25, coverage: 10000, tier: 'basic' },

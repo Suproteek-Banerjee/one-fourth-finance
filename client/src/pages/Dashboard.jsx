@@ -20,19 +20,44 @@ export default function Dashboard() {
     load();
   }, [API_URL, token]);
 
+  const investments = data?.investments || [];
   const portfolioValue = data?.portfolio?.value || 0;
   const loansCount = data?.loans?.length || 0;
   const policiesCount = data?.policies?.length || 0;
   const pensionBalance = data?.pension?.balance || 0;
   const alerts = data?.alerts || [];
-  const portfolioAllocation = data?.portfolio?.allocation || { stocks: 0, bonds: 0, realEstate: 0, crypto: 0 };
+  
+  // Calculate investment values
+  const investmentValue = investments.reduce((sum, inv) => {
+    if (inv.type === 'stock') return sum + (inv.shares * inv.currentPrice);
+    if (inv.type === 'bond') return sum + inv.amount;
+    if (inv.type === 'crypto') return sum + (inv.amount * inv.currentPrice);
+    return sum;
+  }, 0);
+  
+  const totalPortfolioValue = portfolioValue + investmentValue;
+  
+  // Calculate allocation from investments
+  const allocation = investments.reduce((acc, inv) => {
+    const val = inv.type === 'stock' ? inv.shares * inv.currentPrice : inv.type === 'bond' ? inv.amount : inv.amount * inv.currentPrice;
+    acc[inv.type] = (acc[inv.type] || 0) + val;
+    return acc;
+  }, { stocks: 0, bonds: 0, crypto: 0 });
+  
+  const totalAllocationValue = Object.values(allocation).reduce((sum, val) => sum + val, 0);
+  const allocationPercent = totalAllocationValue > 0 
+    ? { 
+        stocks: allocation.stocks / totalAllocationValue, 
+        bonds: allocation.bonds / totalAllocationValue, 
+        crypto: allocation.crypto / totalAllocationValue 
+      }
+    : { stocks: 0, bonds: 0, crypto: 0 };
 
   const pieData = [
-    { name: 'Stocks', value: Math.round((portfolioAllocation.stocks || 0) * 100), color: '#0088FE' },
-    { name: 'Bonds', value: Math.round((portfolioAllocation.bonds || 0) * 100), color: '#00C49F' },
-    { name: 'Real Estate', value: Math.round((portfolioAllocation.realEstate || 0) * 100), color: '#FFBB28' },
-    { name: 'Crypto', value: Math.round((portfolioAllocation.crypto || 0) * 100), color: '#FF8042' }
-  ];
+    { name: 'Stocks', value: Math.round(allocationPercent.stocks * 100), color: '#0088FE' },
+    { name: 'Bonds', value: Math.round(allocationPercent.bonds * 100), color: '#00C49F' },
+    { name: 'Crypto', value: Math.round(allocationPercent.crypto * 100), color: '#FF8042' }
+  ].filter(item => item.value > 0);
 
   const monthlyData = [
     { month: 'Jan', value: 22000 },
@@ -59,7 +84,7 @@ export default function Dashboard() {
                 <Icon as={ArrowUpIcon} color="green.500" />
                 <StatLabel color="gray.700">Portfolio Value</StatLabel>
               </HStack>
-              <StatNumber color="green.600" fontSize="3xl">${portfolioValue.toLocaleString()}</StatNumber>
+              <StatNumber color="green.600" fontSize="3xl">${totalPortfolioValue.toLocaleString()}</StatNumber>
               <StatHelpText fontWeight="medium">Total Investments</StatHelpText>
             </Stat>
           </CardBody>
