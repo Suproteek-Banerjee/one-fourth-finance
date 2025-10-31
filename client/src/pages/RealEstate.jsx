@@ -31,22 +31,22 @@ export default function RealEstate() {
 
   return (
     <Box p={6}>
-      <Heading mb={6}>Tokenized Real Estate Investment</Heading>
+      <Heading mb={6} bgGradient="linear(to-r, blue.600, purple.600)" bgClip="text">Tokenized Real Estate Investment</Heading>
       
       <SimpleGrid columns={[1, 2, 3]} gap={6} mb={8}>
         {properties.map((p) => (
-          <Card key={p.id} border={selected === p.id ? '2px solid' : '1px'} borderColor={selected === p.id ? 'blue.500' : 'gray.200'} cursor="pointer" onClick={() => setSelected(p.id)}>
+          <Card key={p.id} bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="xl" border={selected === p.id ? '2px solid' : '1px'} borderColor={selected === p.id ? 'blue.500' : 'rgba(255,255,255,0.5)'} cursor="pointer" onClick={() => setSelected(p.id)} transition="all 0.3s" _hover={{ transform: 'translateY(-3px)', boxShadow: '2xl' }}>
             <CardHeader>
               <Heading size="sm">{p.title}</Heading>
-              <Badge colorScheme="green" mt={2}>{Math.round(p.roi * 100)}% ROI</Badge>
+              <Badge colorScheme="green" mt={2} fontSize="md" px={3} py={1}>{Math.round(p.roi * 100)}% ROI</Badge>
             </CardHeader>
             <CardBody>
               <VStack align="stretch" spacing={2}>
-                <HStack justify="space-between">
+                <HStack justify="space-between" p={2} bgGradient="linear(to-r, blue.50, purple.50)" borderRadius="md">
                   <Text fontSize="sm" color="gray.600">Total Value</Text>
-                  <Text fontWeight="bold">${p.price.toLocaleString()}</Text>
+                  <Text fontWeight="bold" fontSize="lg">${p.price.toLocaleString()}</Text>
                 </HStack>
-                <HStack justify="space-between">
+                <HStack justify="space-between" p={2} bgGradient="linear(to-r, green.50, teal.50)" borderRadius="md">
                   <Text fontSize="sm" color="gray.600">Tokens Available</Text>
                   <Text fontWeight="bold">{p.tokensAvailable.toLocaleString()}</Text>
                 </HStack>
@@ -60,19 +60,19 @@ export default function RealEstate() {
         ))}
       </SimpleGrid>
 
-      <Card mb={8}>
+      <Card mb={8} bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="xl" border="1px solid rgba(255,255,255,0.5)">
         <CardHeader>
           <Heading size="md">Purchase Tokens</Heading>
         </CardHeader>
         <CardBody>
           {selectedProperty ? (
             <VStack align="stretch" spacing={4}>
-              <Box p={4} bg="blue.50" borderRadius="md">
+              <Box p={4} bgGradient="linear(to-r, blue.100, purple.100)" borderRadius="md">
                 <Text fontWeight="bold" mb={2}>Selected: {selectedProperty.title}</Text>
                 <Text fontSize="sm" color="gray.600">Available tokens: {selectedProperty.tokensAvailable.toLocaleString()}</Text>
               </Box>
-              <Input type="number" placeholder="Number of tokens" value={tokens} onChange={e => setTokens(e.target.value)} maxW="sm" />
-              <Button onClick={purchase} isDisabled={!selected || loading} colorScheme="blue" isLoading={loading}>
+              <Input type="number" placeholder="Number of tokens" value={tokens} onChange={e => setTokens(e.target.value)} maxW="sm" size="lg" />
+              <Button onClick={purchase} isDisabled={!selected || loading} colorScheme="blue" isLoading={loading} size="lg">
                 Purchase Tokens
               </Button>
             </VStack>
@@ -83,7 +83,7 @@ export default function RealEstate() {
       </Card>
 
       {holdings.length > 0 && (
-        <Card>
+        <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="xl" border="1px solid rgba(255,255,255,0.5)">
           <CardHeader>
             <Heading size="md">My Real Estate Holdings</Heading>
           </CardHeader>
@@ -94,11 +94,11 @@ export default function RealEstate() {
                   <CardBody>
                     <HStack justify="space-between">
                       <Box>
-                        <Text fontWeight="bold">{holding.property?.title || 'Property'}</Text>
+                        <Text fontWeight="bold" fontSize="lg">{holding.property?.title || 'Property'}</Text>
                         <Text fontSize="sm" color="gray.600">Tokens Owned: {holding.tokens.toLocaleString()}</Text>
                       </Box>
                       {holding.property && (
-                        <Badge colorScheme="green" fontSize="md">
+                        <Badge colorScheme="green" fontSize="md" px={4} py={2}>
                           {Math.round(holding.property.roi * 100)}% ROI
                         </Badge>
                       )}

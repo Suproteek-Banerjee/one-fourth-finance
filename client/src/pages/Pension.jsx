@@ -70,53 +70,53 @@ export default function Pension() {
       <SimpleGrid columns={[1, 2, 4]} gap={6} mb={8}>
         {account ? (
           <>
-            <Card bgGradient="linear(to-br, green.50, green.100)">
+            <Card bgGradient="linear(to-br, green.400, green.600)" color="white" boxShadow="2xl">
               <CardBody>
                 <Stat>
                   <HStack mb={2}>
-                    <Icon as={CheckCircleIcon} color="green.500" />
-                    <StatLabel color="gray.600">Current Balance</StatLabel>
+                    <Icon as={CheckCircleIcon} />
+                    <StatLabel opacity={0.9}>Current Balance</StatLabel>
                   </HStack>
-                  <StatNumber color="green.700" fontSize="3xl">${account.balance.toLocaleString()}</StatNumber>
-                  <StatHelpText>Crypto Assets</StatHelpText>
+                  <StatNumber fontSize="3xl">${account.balance.toLocaleString()}</StatNumber>
+                  <StatHelpText opacity={0.8}>Crypto Assets</StatHelpText>
                 </Stat>
               </CardBody>
             </Card>
-            <Card bgGradient="linear(to-br, blue.50, blue.100)">
+            <Card bgGradient="linear(to-br, blue.400, blue.600)" color="white" boxShadow="2xl">
               <CardBody>
                 <Stat>
                   <HStack mb={2}>
-                    <Icon as={ArrowUpIcon} color="blue.500" />
-                    <StatLabel color="gray.600">APY Rate</StatLabel>
+                    <Icon as={ArrowUpIcon} />
+                    <StatLabel opacity={0.9}>APY Rate</StatLabel>
                   </HStack>
-                  <StatNumber color="blue.700" fontSize="3xl">{(account.apy * 100).toFixed(2)}%</StatNumber>
-                  <StatHelpText>Annual Return</StatHelpText>
+                  <StatNumber fontSize="3xl">{(account.apy * 100).toFixed(2)}%</StatNumber>
+                  <StatHelpText opacity={0.8}>Annual Return</StatHelpText>
                 </Stat>
               </CardBody>
             </Card>
-            <Card bgGradient="linear(to-br, purple.50, purple.100)">
+            <Card bgGradient="linear(to-br, purple.400, purple.600)" color="white" boxShadow="2xl">
               <CardBody>
                 <Stat>
                   <HStack mb={2}>
-                    <Icon as={InfoIcon} color="purple.500" />
-                    <StatLabel color="gray.600">Monthly Deposit</StatLabel>
+                    <Icon as={InfoIcon} />
+                    <StatLabel opacity={0.9}>Monthly Deposit</StatLabel>
                   </HStack>
-                  <StatNumber color="purple.700" fontSize="3xl">${account.monthlyContribution}</StatNumber>
-                  <StatHelpText>Auto Deposit</StatHelpText>
+                  <StatNumber fontSize="3xl">${account.monthlyContribution}</StatNumber>
+                  <StatHelpText opacity={0.8}>Auto Deposit</StatHelpText>
                 </Stat>
               </CardBody>
             </Card>
-            <Card bgGradient="linear(to-br, orange.50, orange.100)">
+            <Card bgGradient="linear(to-br, orange.400, orange.600)" color="white" boxShadow="2xl">
               <CardBody>
                 <Stat>
                   <HStack mb={2}>
-                    <Icon as={ArrowUpIcon} color="orange.500" />
-                    <StatLabel color="gray.600">Total Value</StatLabel>
+                    <Icon as={ArrowUpIcon} />
+                    <StatLabel opacity={0.9}>Total Value</StatLabel>
                   </HStack>
-                  <StatNumber color="orange.700" fontSize="3xl">
+                  <StatNumber fontSize="3xl">
                     ${((account.balance * (1 + account.apy)) || 0).toLocaleString()}
                   </StatNumber>
-                  <StatHelpText>With Growth</StatHelpText>
+                  <StatHelpText opacity={0.8}>With Growth</StatHelpText>
                 </Stat>
               </CardBody>
             </Card>
@@ -126,8 +126,8 @@ export default function Pension() {
         )}
       </SimpleGrid>
 
-      <Card mb={8} boxShadow="lg">
-        <CardHeader bgGradient="linear(to-r, blue.500, purple.500)" color="white">
+      <Card mb={8} bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="2xl" border="1px solid rgba(255,255,255,0.5)">
+        <CardHeader bgGradient="linear(to-r, blue.500, purple.500)" color="white" borderRadius="lg">
           <Heading size="md">Deposit Funds</Heading>
         </CardHeader>
         <CardBody>
@@ -156,8 +156,8 @@ export default function Pension() {
         </CardBody>
       </Card>
 
-      <Card boxShadow="lg">
-        <CardHeader bgGradient="linear(to-r, green.500, teal.500)" color="white">
+      <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="2xl" border="1px solid rgba(255,255,255,0.5)">
+        <CardHeader bgGradient="linear(to-r, green.500, teal.500)" color="white" borderRadius="lg">
           <Heading size="md">Growth Simulation</Heading>
         </CardHeader>
         <CardBody>
@@ -199,7 +199,7 @@ export default function Pension() {
                     formatter={(value) => [`$${value.toLocaleString()}`, 'Value']}
                     contentStyle={{ 
                       backgroundColor: 'white', 
-                      border: '1px solid gray.300', 
+                      border: '1px solid #E2E8F0', 
                       borderRadius: '8px'
                     }}
                   />
