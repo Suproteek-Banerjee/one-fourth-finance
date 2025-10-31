@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { nanoid } from 'nanoid';
 import { db } from '../data/mockDb.js';
+import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -41,10 +42,11 @@ router.post('/reset', (req, res) => {
   res.json({ message: 'Password updated' });
 });
 
-router.post('/kyc', (req, res) => {
-  const { userId, country, idType, idNumber } = req.body;
-  if (!userId || !country || !idType || !idNumber) return res.status(400).json({ error: 'Missing fields' });
-  db.kycSubmissions.push({ id: nanoid(), userId, country, idType, idNumber, status: 'pending' });
+router.post('/kyc', requireAuth, (req, res) => {
+  const { country, idType, idNumber } = req.body;
+  if (!country || !idType || !idNumber) return res.status(400).json({ error: 'Missing fields' });
+  const userId = req.user.id;
+  db.kycSubmissions.push({ id: nanoid(), userId, country, idType, idNumber, status: 'pending', ts: Date.now() });
   // Mock verification: auto-approve non-empty idNumber
   const sub = db.kycSubmissions[db.kycSubmissions.length - 1];
   sub.status = idNumber.length > 4 ? 'approved' : 'rejected';

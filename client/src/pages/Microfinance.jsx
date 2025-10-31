@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Button, Heading, Input, Text, Card, CardBody, CardHeader, SimpleGrid, VStack, HStack, Badge, Divider, Tabs, TabList, TabPanels, Tab, TabPanel } from '@chakra-ui/react';
+import { Box, Button, Heading, Input, Text, Card, CardBody, CardHeader, SimpleGrid, VStack, HStack, Badge, Divider, Tabs, TabList, TabPanels, Tab, TabPanel, Table, Thead, Tbody, Tr, Th, Td, Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, useDisclosure } from '@chakra-ui/react';
 import { useAuth } from '../context/AuthContext.jsx';
 
 export default function Microfinance() {
@@ -10,6 +10,8 @@ export default function Microfinance() {
   const [result, setResult] = useState(null);
   const [myLoans, setMyLoans] = useState({ borrower: [], lender: [] });
   const [loading, setLoading] = useState(false);
+  const [schedule, setSchedule] = useState([]);
+  const { isOpen, onOpen, onClose } = useDisclosure();
 
   async function apply() {
     setLoading(true);
@@ -29,6 +31,13 @@ export default function Microfinance() {
     const res = await fetch(`${API_URL}/microfinance/my-loans`, { headers: { Authorization: `Bearer ${token}` } });
     const data = await res.json();
     setMyLoans(data);
+  }
+
+  async function viewSchedule(loanId) {
+    const res = await fetch(`${API_URL}/microfinance/repayment-schedule/${loanId}`, { headers: { Authorization: `Bearer ${token}` } });
+    const data = await res.json();
+    setSchedule(data.schedule);
+    onOpen();
   }
 
   useEffect(() => { loadMy(); }, []);
@@ -103,9 +112,14 @@ export default function Microfinance() {
                           </HStack>
                           <Divider my={3} />
                           <Text fontSize="sm">Funded: ${loan.funded.toLocaleString()} / ${loan.amount.toLocaleString()}</Text>
-                          {loan.status === 'pending_funding' && (
-                            <Button size="sm" onClick={() => fund(loan.id)} mt={2}>Fund $200</Button>
-                          )}
+                          <HStack mt={3} spacing={2}>
+                            {loan.status === 'pending_funding' && (
+                              <Button size="sm" onClick={() => fund(loan.id)}>Fund $200</Button>
+                            )}
+                            {loan.status === 'active' && (
+                              <Button size="sm" onClick={() => viewSchedule(loan.id)} variant="outline">View Schedule</Button>
+                            )}
+                          </HStack>
                         </CardBody>
                       </Card>
                     ))}
@@ -144,6 +158,45 @@ export default function Microfinance() {
           </Tabs>
         </CardBody>
       </Card>
+
+      <Modal isOpen={isOpen} onClose={onClose} size="lg">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Loan Repayment Schedule</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            {schedule.length > 0 ? (
+              <Table variant="simple" size="sm">
+                <Thead>
+                  <Tr>
+                    <Th>Installment</Th>
+                    <Th>Payment</Th>
+                    <Th>Principal</Th>
+                    <Th>Interest</Th>
+                    <Th>Balance</Th>
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {schedule.map((item) => (
+                    <Tr key={item.installment}>
+                      <Td>{item.installment}</Td>
+                      <Td>${item.payment.toFixed(2)}</Td>
+                      <Td>${item.principal.toFixed(2)}</Td>
+                      <Td>${item.interest.toFixed(2)}</Td>
+                      <Td>${item.balance.toFixed(2)}</Td>
+                    </Tr>
+                  ))}
+                </Tbody>
+              </Table>
+            ) : (
+              <Text>Loading schedule...</Text>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button onClick={onClose}>Close</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 }

@@ -17,7 +17,7 @@ export default function Profile() {
     const res = await fetch(`${API_URL}/auth/kyc`, { 
       method: 'POST', 
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, 
-      body: JSON.stringify({ userId: user.id, ...kyc }) 
+      body: JSON.stringify({ ...kyc }) 
     });
     const data = await res.json();
     toast({ title: `KYC ${data.status}`, status: data.status === 'approved' ? 'success' : 'error' });
