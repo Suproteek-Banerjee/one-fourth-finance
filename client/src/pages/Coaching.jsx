@@ -126,7 +126,7 @@ export default function Coaching() {
                 {allocationData.map((item, idx) => (
                   <Box key={idx}>
                     <HStack mb={2}>
-                      <ShieldIcon color={item.color} />
+                      <Icon as={InfoIcon} color={item.color} />
                       <Text fontWeight="medium" flex={1}>{item.name}</Text>
                       <Badge fontSize="md" px={3} py={1} colorScheme={item.color === '#0088FE' ? 'blue' : item.color === '#00C49F' ? 'green' : item.color === '#FFBB28' ? 'yellow' : 'orange'}>
                         {item.value}%
