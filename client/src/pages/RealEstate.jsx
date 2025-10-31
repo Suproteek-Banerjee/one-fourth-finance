@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Button, Heading, Input, Select, Text } from '@chakra-ui/react';
+import { Box, Button, Heading, Input, Text, Card, CardBody, CardHeader, SimpleGrid, VStack, HStack, Badge } from '@chakra-ui/react';
 import { useAuth } from '../context/AuthContext.jsx';
 
 export default function RealEstate() {
@@ -8,6 +8,7 @@ export default function RealEstate() {
   const [selected, setSelected] = useState('');
   const [tokens, setTokens] = useState(100);
   const [holdings, setHoldings] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   async function load() {
     const res = await fetch(`${API_URL}/real-estate/properties`, { headers: { Authorization: `Bearer ${token}` } });
@@ -18,26 +19,97 @@ export default function RealEstate() {
   }
 
   async function purchase() {
+    setLoading(true);
     await fetch(`${API_URL}/real-estate/purchase`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ propertyId: selected, tokens: Number(tokens) }) });
     await load();
+    setLoading(false);
   }
 
   useEffect(() => { load(); }, []);
 
+  const selectedProperty = properties.find(p => p.id === selected);
+
   return (
-    <Box>
-      <Heading mb={4}>Tokenized Real Estate</Heading>
-      <Select placeholder="Select property" value={selected} onChange={e => setSelected(e.target.value)} maxW="md" mb={3}>
-        {properties.map(p => <option key={p.id} value={p.id}>{p.title} – ROI {Math.round(p.roi*100)}% – tokens left {p.tokensAvailable}</option>)}
-      </Select>
-      <Input type="number" maxW="sm" mb={2} value={tokens} onChange={e => setTokens(e.target.value)} />
-      <Button onClick={purchase} isDisabled={!selected}>Purchase</Button>
-      <Box mt={6}>
-        <Heading size="sm">My Holdings</Heading>
-        <pre>{JSON.stringify(holdings, null, 2)}</pre>
-      </Box>
+    <Box p={6}>
+      <Heading mb={6}>Tokenized Real Estate Investment</Heading>
+      
+      <SimpleGrid columns={[1, 2, 3]} gap={6} mb={8}>
+        {properties.map((p) => (
+          <Card key={p.id} border={selected === p.id ? '2px solid' : '1px'} borderColor={selected === p.id ? 'blue.500' : 'gray.200'} cursor="pointer" onClick={() => setSelected(p.id)}>
+            <CardHeader>
+              <Heading size="sm">{p.title}</Heading>
+              <Badge colorScheme="green" mt={2}>{Math.round(p.roi * 100)}% ROI</Badge>
+            </CardHeader>
+            <CardBody>
+              <VStack align="stretch" spacing={2}>
+                <HStack justify="space-between">
+                  <Text fontSize="sm" color="gray.600">Total Value</Text>
+                  <Text fontWeight="bold">${p.price.toLocaleString()}</Text>
+                </HStack>
+                <HStack justify="space-between">
+                  <Text fontSize="sm" color="gray.600">Tokens Available</Text>
+                  <Text fontWeight="bold">{p.tokensAvailable.toLocaleString()}</Text>
+                </HStack>
+                <HStack justify="space-between">
+                  <Text fontSize="sm" color="gray.600">Tokens Total</Text>
+                  <Text>{p.tokensTotal.toLocaleString()}</Text>
+                </HStack>
+              </VStack>
+            </CardBody>
+          </Card>
+        ))}
+      </SimpleGrid>
+
+      <Card mb={8}>
+        <CardHeader>
+          <Heading size="md">Purchase Tokens</Heading>
+        </CardHeader>
+        <CardBody>
+          {selectedProperty ? (
+            <VStack align="stretch" spacing={4}>
+              <Box p={4} bg="blue.50" borderRadius="md">
+                <Text fontWeight="bold" mb={2}>Selected: {selectedProperty.title}</Text>
+                <Text fontSize="sm" color="gray.600">Available tokens: {selectedProperty.tokensAvailable.toLocaleString()}</Text>
+              </Box>
+              <Input type="number" placeholder="Number of tokens" value={tokens} onChange={e => setTokens(e.target.value)} maxW="sm" />
+              <Button onClick={purchase} isDisabled={!selected || loading} colorScheme="blue" isLoading={loading}>
+                Purchase Tokens
+              </Button>
+            </VStack>
+          ) : (
+            <Text color="gray.500">Select a property above to purchase tokens</Text>
+          )}
+        </CardBody>
+      </Card>
+
+      {holdings.length > 0 && (
+        <Card>
+          <CardHeader>
+            <Heading size="md">My Real Estate Holdings</Heading>
+          </CardHeader>
+          <CardBody>
+            <VStack align="stretch" spacing={4}>
+              {holdings.map((holding) => (
+                <Card key={holding.id}>
+                  <CardBody>
+                    <HStack justify="space-between">
+                      <Box>
+                        <Text fontWeight="bold">{holding.property?.title || 'Property'}</Text>
+                        <Text fontSize="sm" color="gray.600">Tokens Owned: {holding.tokens.toLocaleString()}</Text>
+                      </Box>
+                      {holding.property && (
+                        <Badge colorScheme="green" fontSize="md">
+                          {Math.round(holding.property.roi * 100)}% ROI
+                        </Badge>
+                      )}
+                    </HStack>
+                  </CardBody>
+                </Card>
+              ))}
+            </VStack>
+          </CardBody>
+        </Card>
+      )}
     </Box>
   );
 }
-
-
