@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Box, Button, Heading, SimpleGrid, Slider, SliderFilledTrack, SliderThumb, SliderTrack, Text, Card, CardBody, CardHeader, VStack, Progress, Badge, HStack, Icon, Alert, AlertIcon, AlertDescription } from '@chakra-ui/react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, Area, AreaChart, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import { FaChartLine, FaShieldAlt, FaRocket, FaCoins } from 'react-icons/fa';
+import { ArrowUpIcon, ShieldIcon, InfoIcon, ChevronRightIcon } from '@chakra-ui/icons';
 
 const questions = [
   { text: 'How comfortable are you with investment risk?', emoji: '🎲', options: ['Very Conservative', 'Conservative', 'Balanced', 'Aggressive', 'Very Aggressive'] },
@@ -11,8 +11,6 @@ const questions = [
   { text: 'What percentage of income do you invest?', emoji: '💼', options: ['< 5%', '5-10%', '10-20%', '20-30%', '> 30%'] },
   { text: 'Experience level with investments?', emoji: '🎓', options: ['Beginner', 'Some experience', 'Intermediate', 'Advanced', 'Expert'] }
 ];
-
-const riskColors = ['#00C9FF', '#00D4FF', '#FFD700', '#FF8C00', '#FF4500'];
 
 export default function Coaching() {
   const { API_URL, token } = useAuth();
@@ -45,10 +43,10 @@ export default function Coaching() {
   }
 
   const allocationData = allocation ? [
-    { name: 'Stocks', value: (allocation.stocks * 100).toFixed(0), color: '#0088FE', icon: FaRocket },
-    { name: 'Bonds', value: (allocation.bonds * 100).toFixed(0), color: '#00C49F', icon: FaShieldAlt },
-    { name: 'Real Estate', value: (allocation.realEstate * 100).toFixed(0), color: '#FFBB28', icon: FaCoins },
-    { name: 'Crypto', value: (allocation.crypto * 100).toFixed(0), color: '#FF8042', icon: FaChartLine }
+    { name: 'Stocks', value: (allocation.stocks * 100).toFixed(0), color: '#0088FE' },
+    { name: 'Bonds', value: (allocation.bonds * 100).toFixed(0), color: '#00C49F' },
+    { name: 'Real Estate', value: (allocation.realEstate * 100).toFixed(0), color: '#FFBB28' },
+    { name: 'Crypto', value: (allocation.crypto * 100).toFixed(0), color: '#FF8042' }
   ] : [];
 
   const simData = sim ? sim.history.map((h, idx) => ({ month: h.month, value: h.value })) : [];
@@ -103,7 +101,7 @@ export default function Coaching() {
                 </AlertDescription>
               </Alert>
               
-              <Button onClick={assess} isLoading={loading} colorScheme="blue" size="lg" w="full" leftIcon={<Icon as={FaChartLine} />}>
+              <Button onClick={assess} isLoading={loading} colorScheme="blue" size="lg" w="full" leftIcon={<ArrowUpIcon />}>
                 Get AI Recommendation
               </Button>
             </VStack>
@@ -128,7 +126,7 @@ export default function Coaching() {
                 {allocationData.map((item, idx) => (
                   <Box key={idx}>
                     <HStack mb={2}>
-                      <Icon as={item.icon} color={item.color} />
+                      <ShieldIcon color={item.color} />
                       <Text fontWeight="medium" flex={1}>{item.name}</Text>
                       <Badge fontSize="md" px={3} py={1} colorScheme={item.color === '#0088FE' ? 'blue' : item.color === '#00C49F' ? 'green' : item.color === '#FFBB28' ? 'yellow' : 'orange'}>
                         {item.value}%
@@ -166,7 +164,7 @@ export default function Coaching() {
                   </ResponsiveContainer>
                 </Box>
                 
-                <Button onClick={simulate} colorScheme="green" mt={4} leftIcon={<Icon as={FaRocket} />}>
+                <Button onClick={simulate} colorScheme="green" mt={4} leftIcon={<ChevronRightIcon />}>
                   Simulate Growth (24 months)
                 </Button>
                 
@@ -201,7 +199,7 @@ export default function Coaching() {
               </VStack>
             ) : (
               <Box textAlign="center" py={12}>
-                <Icon as={FaChartLine} fontSize="4xl" color="gray.300" mb={4} />
+                <InfoIcon fontSize="4xl" color="gray.300" mb={4} />
                 <Text color="gray.500" fontSize="lg">Complete the questionnaire to get personalized recommendations</Text>
               </Box>
             )}

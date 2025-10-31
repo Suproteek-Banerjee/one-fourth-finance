@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Box, Button, Heading, Input, Text, Card, CardBody, CardHeader, SimpleGrid, Stat, StatLabel, StatNumber, StatHelpText, VStack, useToast, HStack, Icon, Badge, Alert, AlertIcon } from '@chakra-ui/react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { ResponsiveContainer, AreaChart, Area, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
-import { FaWallet, FaChartLine, FaCoins, FaTrendUp } from 'react-icons/fa';
+import { ViewIcon, ArrowUpIcon, CheckCircleIcon, InfoIcon } from '@chakra-ui/icons';
 
 export default function Pension() {
   const { API_URL, token } = useAuth();
@@ -63,7 +63,7 @@ export default function Pension() {
   return (
     <Box p={6}>
       <HStack mb={6}>
-        <Icon as={FaWallet} fontSize="2xl" color="blue.500" />
+        <Icon as={ViewIcon} fontSize="2xl" color="blue.500" />
         <Heading>Crypto-Pension Plans</Heading>
       </HStack>
       
@@ -74,7 +74,7 @@ export default function Pension() {
               <CardBody>
                 <Stat>
                   <HStack mb={2}>
-                    <Icon as={FaCoins} color="green.500" />
+                    <Icon as={CheckCircleIcon} color="green.500" />
                     <StatLabel color="gray.600">Current Balance</StatLabel>
                   </HStack>
                   <StatNumber color="green.700" fontSize="3xl">${account.balance.toLocaleString()}</StatNumber>
@@ -86,7 +86,7 @@ export default function Pension() {
               <CardBody>
                 <Stat>
                   <HStack mb={2}>
-                    <Icon as={FaChartLine} color="blue.500" />
+                    <Icon as={ArrowUpIcon} color="blue.500" />
                     <StatLabel color="gray.600">APY Rate</StatLabel>
                   </HStack>
                   <StatNumber color="blue.700" fontSize="3xl">{(account.apy * 100).toFixed(2)}%</StatNumber>
@@ -98,7 +98,7 @@ export default function Pension() {
               <CardBody>
                 <Stat>
                   <HStack mb={2}>
-                    <Icon as={FaTrendUp} color="purple.500" />
+                    <Icon as={InfoIcon} color="purple.500" />
                     <StatLabel color="gray.600">Monthly Deposit</StatLabel>
                   </HStack>
                   <StatNumber color="purple.700" fontSize="3xl">${account.monthlyContribution}</StatNumber>
@@ -110,7 +110,7 @@ export default function Pension() {
               <CardBody>
                 <Stat>
                   <HStack mb={2}>
-                    <Icon as={FaTrendUp} color="orange.500" />
+                    <Icon as={ArrowUpIcon} color="orange.500" />
                     <StatLabel color="gray.600">Total Value</StatLabel>
                   </HStack>
                   <StatNumber color="orange.700" fontSize="3xl">
@@ -214,15 +214,15 @@ export default function Pension() {
                 </AreaChart>
               </ResponsiveContainer>
               
-              <Button onClick={simulate} colorScheme="green" size="lg" leftIcon={<Icon as={FaTrendUp} />}>
+              <Button onClick={simulate} colorScheme="green" size="lg" leftIcon={<ArrowUpIcon />}>
                 Update Projection
               </Button>
             </VStack>
           ) : (
             <Box textAlign="center" py={12}>
-              <Icon as={FaChartLine} fontSize="5xl" color="gray.300" mb={4} />
+              <InfoIcon fontSize="5xl" color="gray.300" mb={4} />
               <Text color="gray.600" fontSize="lg" mb={4}>See your pension growth projection</Text>
-              <Button onClick={simulate} colorScheme="blue" size="lg" leftIcon={<Icon as={FaTrendUp} />}>
+              <Button onClick={simulate} colorScheme="blue" size="lg" leftIcon={<ArrowUpIcon />}>
                 Run Simulation
               </Button>
             </Box>

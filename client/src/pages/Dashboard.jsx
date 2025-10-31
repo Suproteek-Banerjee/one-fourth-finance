@@ -2,8 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Box, Heading, SimpleGrid, Stat, StatHelpText, StatLabel, StatNumber, Card, CardBody, CardHeader, Text, Badge, VStack, HStack, Icon } from '@chakra-ui/react';
 import { AreaChart, Area, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../context/AuthContext.jsx';
-import { WarningIcon, CheckCircleIcon } from '@chakra-ui/icons';
-import { FaWallet, FaFileInvoiceDollar, FaShieldAlt, FaPiggyBank, FaTrendUp, FaArrowUp } from 'react-icons/fa';
+import { WarningIcon, CheckCircleIcon, ArrowUpIcon, ViewIcon, InfoIcon } from '@chakra-ui/icons';
 
 export default function Dashboard() {
   const { API_URL, token } = useAuth();
@@ -59,7 +58,7 @@ export default function Dashboard() {
           <CardBody>
             <Stat>
               <HStack mb={2}>
-                <Icon as={FaTrendUp} color="green.600" />
+                <Icon as={ArrowUpIcon} color="green.600" />
                 <StatLabel color="gray.700">Portfolio Value</StatLabel>
               </HStack>
               <StatNumber color="green.600" fontSize="3xl">${portfolioValue.toLocaleString()}</StatNumber>
@@ -71,7 +70,7 @@ export default function Dashboard() {
           <CardBody>
             <Stat>
               <HStack mb={2}>
-                <Icon as={FaFileInvoiceDollar} color="blue.600" />
+                <Icon as={ViewIcon} color="blue.600" />
                 <StatLabel color="gray.700">Active Loans</StatLabel>
               </HStack>
               <StatNumber color="blue.600" fontSize="3xl">{loansCount}</StatNumber>
@@ -83,7 +82,7 @@ export default function Dashboard() {
           <CardBody>
             <Stat>
               <HStack mb={2}>
-                <Icon as={FaShieldAlt} color="purple.600" />
+                <Icon as={InfoIcon} color="purple.600" />
                 <StatLabel color="gray.700">Policies</StatLabel>
               </HStack>
               <StatNumber color="purple.600" fontSize="3xl">{policiesCount}</StatNumber>
@@ -95,7 +94,7 @@ export default function Dashboard() {
           <CardBody>
             <Stat>
               <HStack mb={2}>
-                <Icon as={FaPiggyBank} color="orange.600" />
+                <Icon as={CheckCircleIcon} color="orange.600" />
                 <StatLabel color="gray.700">Pension</StatLabel>
               </HStack>
               <StatNumber color="orange.600" fontSize="3xl">${pensionBalance.toLocaleString()}</StatNumber>
