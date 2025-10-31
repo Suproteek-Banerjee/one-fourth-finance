@@ -22,51 +22,51 @@ export default function Admin() {
 
   return (
     <Box p={6}>
-      <Heading mb={6}>Admin Dashboard</Heading>
+      <Heading mb={6} bgGradient="linear(to-r, blue.600, purple.600)" bgClip="text">Admin Dashboard</Heading>
       <Heading size="md" mb={4}>Platform Metrics</Heading>
       <SimpleGrid columns={[1, 2, 3, 5]} gap={6} mb={8}>
-        <Card>
+        <Card bgGradient="linear(to-br, blue.400, blue.600)" color="white" boxShadow="2xl">
           <CardBody>
             <Stat>
-              <StatLabel color="gray.600">Total Users</StatLabel>
-              <StatNumber color="blue.500" fontSize="2xl">{metrics?.users || 0}</StatNumber>
-              <StatHelpText>Registered</StatHelpText>
+              <StatLabel opacity={0.9}>Total Users</StatLabel>
+              <StatNumber fontSize="3xl">{metrics?.users || 0}</StatNumber>
+              <StatHelpText opacity={0.8}>Registered</StatHelpText>
             </Stat>
           </CardBody>
         </Card>
-        <Card>
+        <Card bgGradient="linear(to-br, green.400, green.600)" color="white" boxShadow="2xl">
           <CardBody>
             <Stat>
-              <StatLabel color="gray.600">Active Loans</StatLabel>
-              <StatNumber color="green.500" fontSize="2xl">{metrics?.loans || 0}</StatNumber>
-              <StatHelpText>Microfinance</StatHelpText>
+              <StatLabel opacity={0.9}>Active Loans</StatLabel>
+              <StatNumber fontSize="3xl">{metrics?.loans || 0}</StatNumber>
+              <StatHelpText opacity={0.8}>Microfinance</StatHelpText>
             </Stat>
           </CardBody>
         </Card>
-        <Card>
+        <Card bgGradient="linear(to-br, purple.400, purple.600)" color="white" boxShadow="2xl">
           <CardBody>
             <Stat>
-              <StatLabel color="gray.600">Insurance Policies</StatLabel>
-              <StatNumber color="purple.500" fontSize="2xl">{metrics?.policies || 0}</StatNumber>
-              <StatHelpText>Active</StatHelpText>
+              <StatLabel opacity={0.9}>Insurance Policies</StatLabel>
+              <StatNumber fontSize="3xl">{metrics?.policies || 0}</StatNumber>
+              <StatHelpText opacity={0.8}>Active</StatHelpText>
             </Stat>
           </CardBody>
         </Card>
-        <Card>
+        <Card bgGradient="linear(to-br, orange.400, orange.600)" color="white" boxShadow="2xl">
           <CardBody>
             <Stat>
-              <StatLabel color="gray.600">Properties</StatLabel>
-              <StatNumber color="orange.500" fontSize="2xl">{metrics?.properties || 0}</StatNumber>
-              <StatHelpText>Tokenized</StatHelpText>
+              <StatLabel opacity={0.9}>Properties</StatLabel>
+              <StatNumber fontSize="3xl">{metrics?.properties || 0}</StatNumber>
+              <StatHelpText opacity={0.8}>Tokenized</StatHelpText>
             </Stat>
           </CardBody>
         </Card>
-        <Card>
+        <Card bgGradient="linear(to-br, red.400, red.600)" color="white" boxShadow="2xl">
           <CardBody>
             <Stat>
-              <StatLabel color="gray.600">Fraud Alerts</StatLabel>
-              <StatNumber color="red.500" fontSize="2xl">{metrics?.alerts || 0}</StatNumber>
-              <StatHelpText>Total</StatHelpText>
+              <StatLabel opacity={0.9}>Fraud Alerts</StatLabel>
+              <StatNumber fontSize="3xl">{metrics?.alerts || 0}</StatNumber>
+              <StatHelpText opacity={0.8}>Total</StatHelpText>
             </Stat>
           </CardBody>
         </Card>

@@ -24,9 +24,9 @@ export default function CreditRisk() {
 
   return (
     <Box p={6}>
-      <Heading mb={6}>AI-Powered Credit Risk Assessment</Heading>
+      <Heading mb={6} bgGradient="linear(to-r, blue.600, purple.600)" bgClip="text">AI-Powered Credit Risk Assessment</Heading>
       <SimpleGrid columns={[1, 2]} gap={6}>
-        <Card>
+        <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="2xl" border="1px solid rgba(255,255,255,0.5)">
           <CardHeader>
             <Heading size="md">Financial Information</Heading>
           </CardHeader>
@@ -53,7 +53,7 @@ export default function CreditRisk() {
           </CardBody>
         </Card>
 
-        <Card>
+        <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="2xl" border="1px solid rgba(255,255,255,0.5)">
           <CardHeader>
             <Heading size="md">Risk Assessment Results</Heading>
           </CardHeader>
@@ -70,13 +70,13 @@ export default function CreditRisk() {
                 </Box>
                 
                 <SimpleGrid columns={2} gap={4}>
-                  <Box p={4} bg={`${result.eligible ? 'green' : 'red'}.50`} borderRadius="md">
+                  <Box p={4} bgGradient={`linear(to-br, ${result.eligible ? 'green' : 'red'}.50, ${result.eligible ? 'green' : 'red'}.100)`} borderRadius="md" boxShadow="md">
                     <Text fontSize="sm" color="gray.600">Eligibility</Text>
                     <Text fontSize="xl" fontWeight="bold" color={result.eligible ? 'green.600' : 'red.600'}>
                       {result.eligible ? '✓ Eligible' : '✗ Not Eligible'}
                     </Text>
                   </Box>
-                  <Box p={4} bg="blue.50" borderRadius="md">
+                  <Box p={4} bgGradient="linear(to-br, blue.50, blue.100)" borderRadius="md" boxShadow="md">
                     <Text fontSize="sm" color="gray.600">Default Probability</Text>
                     <Text fontSize="xl" fontWeight="bold" color="blue.600">
                       {(result.probabilityOfDefault * 100).toFixed(1)}%
@@ -86,7 +86,9 @@ export default function CreditRisk() {
 
                 <Box mt={4}>
                   <Text fontSize="sm" color="gray.600" mb={2}>Score Breakdown</Text>
-                  <Progress value={(result.score / 850) * 100} colorScheme={riskColor} size="lg" />
+                  <Box bg={`${riskColor}.100`} borderRadius="full" h="10px">
+                    <Box bg={`${riskColor}.500`} h="100%" borderRadius="full" width={`${(result.score / 850) * 100}%`} />
+                  </Box>
                   <Text fontSize="xs" color="gray.500" mt={2}>
                     Scores range from 300-850. Higher is better.
                   </Text>

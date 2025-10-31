@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Button, Heading, Input, Text, Card, CardBody, CardHeader, SimpleGrid, VStack, HStack, Badge, Divider, Tabs, TabList, TabPanels, Tab, TabPanel, Table, Thead, Tbody, Tr, Th, Td, Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, useDisclosure } from '@chakra-ui/react';
+import { Box, Button, Heading, Input, Text, Card, CardBody, CardHeader, SimpleGrid, VStack, HStack, Badge, Divider, Tabs, TabList, TabPanels, Tab, TabPanel, Table, Thead, Tbody, Tr, Th, Td, Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, useDisclosure, useToast } from '@chakra-ui/react';
 import { useAuth } from '../context/AuthContext.jsx';
 
 export default function Microfinance() {
   const { API_URL, token } = useAuth();
+  const toast = useToast();
   const [amount, setAmount] = useState(1000);
   const [income, setIncome] = useState(1200);
   const [creditScore, setCreditScore] = useState(680);
@@ -18,12 +19,14 @@ export default function Microfinance() {
     const res = await fetch(`${API_URL}/microfinance/apply`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ amount: Number(amount), income: Number(income), creditScore: Number(creditScore) }) });
     const data = await res.json();
     setResult(data);
+    toast({ title: data.approved ? 'Loan Approved!' : 'Loan Rejected', status: data.approved ? 'success' : 'error' });
     await loadMy();
     setLoading(false);
   }
 
   async function fund(loanId) {
     await fetch(`${API_URL}/microfinance/fund`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ loanId, amount: 200 }) });
+    toast({ title: 'Funded $200 to loan', status: 'success' });
     await loadMy();
   }
 
@@ -44,9 +47,9 @@ export default function Microfinance() {
 
   return (
     <Box p={6}>
-      <Heading mb={6}>Cross-Border Microfinance</Heading>
+      <Heading mb={6} bgGradient="linear(to-r, blue.600, purple.600)" bgClip="text">Cross-Border Microfinance</Heading>
       
-      <Card mb={8}>
+      <Card mb={8} bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="2xl" border="1px solid rgba(255,255,255,0.5)">
         <CardHeader>
           <Heading size="md">Apply for a Loan</Heading>
         </CardHeader>
@@ -68,20 +71,22 @@ export default function Microfinance() {
           <Button onClick={apply} isLoading={loading} colorScheme="blue" size="lg" mt={4} w="full">Apply for Loan</Button>
           
           {result && (
-            <Box mt={4} p={4} bg={result.approved ? 'green.50' : 'red.50'} borderRadius="md">
+            <Box mt={4} p={4} bgGradient={`linear(to-r, ${result.approved ? 'green' : 'red'}.100, ${result.approved ? 'green' : 'red'}.200)`} borderRadius="md">
               <HStack justify="space-between">
                 <Box>
                   <Text fontWeight="bold" fontSize="lg">{result.approved ? 'Loan Approved!' : 'Loan Rejected'}</Text>
                   <Text fontSize="sm" color="gray.600">Approval Probability: {Math.round(result.approvalProbability * 100)}%</Text>
                 </Box>
-                <Badge colorScheme={result.approved ? 'green' : 'red'} fontSize="md">{result.approved ? 'APPROVED' : 'REJECTED'}</Badge>
+                <Badge colorScheme={result.approved ? 'green' : 'red'} fontSize="md" px={4} py={2}>
+                  {result.approved ? 'APPROVED' : 'REJECTED'}
+                </Badge>
               </HStack>
             </Box>
           )}
         </CardBody>
       </Card>
 
-      <Card>
+      <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="2xl" border="1px solid rgba(255,255,255,0.5)">
         <CardHeader>
           <Heading size="md">My Loans</Heading>
         </CardHeader>
