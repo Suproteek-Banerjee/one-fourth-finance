@@ -95,7 +95,7 @@ function ProtectedRoute({ children }) {
 export default function App() {
   return (
     <AuthProvider>
-      <Box minH="100vh" bg="gray.50">
+      <Box minH="100vh" bgGradient="linear(to-br, gray.50, blue.50)">
         <NavBar />
         <Box p={6}>
           <Routes>

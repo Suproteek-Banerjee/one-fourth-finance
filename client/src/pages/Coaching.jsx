@@ -55,18 +55,18 @@ export default function Coaching() {
 
   return (
     <Box p={6}>
-      <Heading mb={2}>Personalized Investment Coaching</Heading>
+      <Heading mb={2} bgGradient="linear(to-r, blue.600, purple.600)" bgClip="text">Personalized Investment Coaching</Heading>
       <Text color="gray.600" mb={6}>Complete the assessment to get AI-powered portfolio recommendations</Text>
       
       <SimpleGrid columns={[1, 2]} gap={6}>
-        <Card>
+        <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="2xl" border="1px solid rgba(255,255,255,0.5)">
           <CardHeader>
             <Heading size="md">Risk Assessment Questionnaire</Heading>
           </CardHeader>
           <CardBody>
             <VStack align="stretch" spacing={6}>
               {questions.map((q, i) => (
-                <Box key={i} p={4} border="1px" borderColor="gray.200" borderRadius="md">
+                <Box key={i} p={4} border="1px solid" borderColor="gray.200" borderRadius="md" bg="white" backdropFilter="blur(10px)" bgColor="rgba(255,255,255,0.6)">
                   <HStack mb={3}>
                     <Text fontSize="2xl">{q.emoji}</Text>
                     <Text fontWeight="medium" flex={1}>{q.text}</Text>
@@ -86,7 +86,7 @@ export default function Coaching() {
                   </Slider>
                   <HStack justify="space-between" mt={2}>
                     <Text fontSize="xs" color="gray.600">{q.options[0]}</Text>
-                    <Badge colorScheme={answers[i] === 0 ? 'blue' : answers[i] === 4 ? 'red' : 'purple'}>
+                    <Badge colorScheme={answers[i] === 0 ? 'blue' : answers[i] === 4 ? 'red' : 'purple'} fontSize="sm">
                       {q.options[answers[i]]}
                     </Badge>
                     <Text fontSize="xs" color="gray.600">{q.options[4]}</Text>
@@ -108,16 +108,16 @@ export default function Coaching() {
           </CardBody>
         </Card>
 
-        <Card>
+        <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="2xl" border="1px solid rgba(255,255,255,0.5)">
           <CardHeader>
             <Heading size="md">AI-Powered Recommendations</Heading>
           </CardHeader>
           <CardBody>
             {allocation ? (
               <VStack align="stretch" spacing={6}>
-                <Box textAlign="center" p={4} bg={`${riskScore >= 50 ? 'red' : 'blue'}.50`} borderRadius="md">
-                  <Text fontSize="xs" color="gray.600" mb={1}>Your Risk Profile</Text>
-                  <Badge fontSize="lg" px={4} py={2} colorScheme={riskScore >= 50 ? 'red' : 'blue'}>
+                <Box textAlign="center" p={4} bgGradient={`linear(to-r, ${riskScore >= 50 ? 'red' : 'blue'}.400, ${riskScore >= 50 ? 'red' : 'blue'}.600)`} color="white" borderRadius="md" boxShadow="lg">
+                  <Text fontSize="xs" opacity={0.9} mb={1}>Your Risk Profile</Text>
+                  <Badge fontSize="lg" px={4} py={2} bg="white" color={riskScore >= 50 ? 'red' : 'blue'}>
                     {riskScore >= 75 ? 'Very Aggressive' : riskScore >= 50 ? 'Aggressive' : riskScore >= 25 ? 'Balanced' : 'Conservative'}
                   </Badge>
                 </Box>
@@ -170,12 +170,12 @@ export default function Coaching() {
                 
                 {sim && (
                   <Box mt={4}>
-                    <Box textAlign="center" p={4} bg="green.50" borderRadius="md" mb={4}>
-                      <Text fontSize="xs" color="gray.600" mb={1}>Projected Final Value</Text>
-                      <Text fontSize="3xl" fontWeight="bold" color="green.600">
+                    <Box textAlign="center" p={4} bgGradient="linear(to-r, green.400, green.600)" color="white" borderRadius="md" mb={4} boxShadow="lg">
+                      <Text fontSize="xs" opacity={0.9} mb={1}>Projected Final Value</Text>
+                      <Text fontSize="3xl" fontWeight="bold">
                         ${sim.finalValue.toLocaleString()}
                       </Text>
-                      <Text fontSize="sm" color="gray.600">
+                      <Text fontSize="sm" opacity={0.9}>
                         Starting from $10,000
                       </Text>
                     </Box>
@@ -199,7 +199,7 @@ export default function Coaching() {
               </VStack>
             ) : (
               <Box textAlign="center" py={12}>
-                <InfoIcon fontSize="4xl" color="gray.300" mb={4} />
+                <Icon as={InfoIcon} fontSize="4xl" color="gray.300" mb={4} />
                 <Text color="gray.500" fontSize="lg">Complete the questionnaire to get personalized recommendations</Text>
               </Box>
             )}

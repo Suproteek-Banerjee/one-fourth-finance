@@ -28,10 +28,10 @@ export default function Dashboard() {
   const portfolioAllocation = data?.portfolio?.allocation || { stocks: 0, bonds: 0, realEstate: 0, crypto: 0 };
 
   const pieData = [
-    { name: 'Stocks', value: (portfolioAllocation.stocks || 0) * 100, color: '#0088FE' },
-    { name: 'Bonds', value: (portfolioAllocation.bonds || 0) * 100, color: '#00C49F' },
-    { name: 'Real Estate', value: (portfolioAllocation.realEstate || 0) * 100, color: '#FFBB28' },
-    { name: 'Crypto', value: (portfolioAllocation.crypto || 0) * 100, color: '#FF8042' }
+    { name: 'Stocks', value: Math.round((portfolioAllocation.stocks || 0) * 100), color: '#0088FE' },
+    { name: 'Bonds', value: Math.round((portfolioAllocation.bonds || 0) * 100), color: '#00C49F' },
+    { name: 'Real Estate', value: Math.round((portfolioAllocation.realEstate || 0) * 100), color: '#FFBB28' },
+    { name: 'Crypto', value: Math.round((portfolioAllocation.crypto || 0) * 100), color: '#FF8042' }
   ];
 
   const monthlyData = [
@@ -42,23 +42,21 @@ export default function Dashboard() {
     { month: 'May', value: 25000 }
   ];
 
-  const totalAssets = portfolioValue + pensionBalance + policiesCount * 1000;
-
   if (loading) {
     return <Box p={8}><Text>Loading...</Text></Box>;
   }
 
   return (
     <Box p={6}>
-      <Heading mb={2}>Unified Dashboard</Heading>
+      <Heading mb={2} bgGradient="linear(to-r, blue.600, purple.600)" bgClip="text">Unified Dashboard</Heading>
       <Text color="gray.600" mb={6}>Complete overview of your financial portfolio</Text>
       
       <SimpleGrid columns={[1, 2, 4]} gap={6} mb={8}>
-        <Card bgGradient="linear(to-br, green.50, green.100)" boxShadow="md">
+        <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="2xl" border="1px solid rgba(255,255,255,0.5)" transition="all 0.3s" _hover={{ transform: 'translateY(-5px)', boxShadow: '3xl' }}>
           <CardBody>
             <Stat>
               <HStack mb={2}>
-                <Icon as={ArrowUpIcon} color="green.600" />
+                <Icon as={ArrowUpIcon} color="green.500" />
                 <StatLabel color="gray.700">Portfolio Value</StatLabel>
               </HStack>
               <StatNumber color="green.600" fontSize="3xl">${portfolioValue.toLocaleString()}</StatNumber>
@@ -66,11 +64,11 @@ export default function Dashboard() {
             </Stat>
           </CardBody>
         </Card>
-        <Card bgGradient="linear(to-br, blue.50, blue.100)" boxShadow="md">
+        <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="2xl" border="1px solid rgba(255,255,255,0.5)" transition="all 0.3s" _hover={{ transform: 'translateY(-5px)', boxShadow: '3xl' }}>
           <CardBody>
             <Stat>
               <HStack mb={2}>
-                <Icon as={ViewIcon} color="blue.600" />
+                <Icon as={ViewIcon} color="blue.500" />
                 <StatLabel color="gray.700">Active Loans</StatLabel>
               </HStack>
               <StatNumber color="blue.600" fontSize="3xl">{loansCount}</StatNumber>
@@ -78,11 +76,11 @@ export default function Dashboard() {
             </Stat>
           </CardBody>
         </Card>
-        <Card bgGradient="linear(to-br, purple.50, purple.100)" boxShadow="md">
+        <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="2xl" border="1px solid rgba(255,255,255,0.5)" transition="all 0.3s" _hover={{ transform: 'translateY(-5px)', boxShadow: '3xl' }}>
           <CardBody>
             <Stat>
               <HStack mb={2}>
-                <Icon as={InfoIcon} color="purple.600" />
+                <Icon as={InfoIcon} color="purple.500" />
                 <StatLabel color="gray.700">Policies</StatLabel>
               </HStack>
               <StatNumber color="purple.600" fontSize="3xl">{policiesCount}</StatNumber>
@@ -90,11 +88,11 @@ export default function Dashboard() {
             </Stat>
           </CardBody>
         </Card>
-        <Card bgGradient="linear(to-br, orange.50, orange.100)" boxShadow="md">
+        <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="2xl" border="1px solid rgba(255,255,255,0.5)" transition="all 0.3s" _hover={{ transform: 'translateY(-5px)', boxShadow: '3xl' }}>
           <CardBody>
             <Stat>
               <HStack mb={2}>
-                <Icon as={CheckCircleIcon} color="orange.600" />
+                <Icon as={CheckCircleIcon} color="orange.500" />
                 <StatLabel color="gray.700">Pension</StatLabel>
               </HStack>
               <StatNumber color="orange.600" fontSize="3xl">${pensionBalance.toLocaleString()}</StatNumber>
@@ -105,8 +103,8 @@ export default function Dashboard() {
       </SimpleGrid>
 
       <SimpleGrid columns={[1, 2]} gap={6} mb={8}>
-        <Card boxShadow="lg">
-          <CardHeader bgGradient="linear(to-r, blue.500, purple.500)" color="white">
+        <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="2xl" border="1px solid rgba(255,255,255,0.5)">
+          <CardHeader bgGradient="linear(to-r, blue.500, purple.500)" color="white" borderRadius="lg">
             <Heading size="md">Portfolio Growth</Heading>
           </CardHeader>
           <CardBody>
@@ -128,38 +126,44 @@ export default function Dashboard() {
           </CardBody>
         </Card>
 
-        <Card boxShadow="lg">
-          <CardHeader bgGradient="linear(to-r, green.500, teal.500)" color="white">
+        <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="2xl" border="1px solid rgba(255,255,255,0.5)">
+          <CardHeader bgGradient="linear(to-r, green.500, teal.500)" color="white" borderRadius="lg">
             <Heading size="md">Portfolio Allocation</Heading>
           </CardHeader>
           <CardBody>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie 
-                  data={pieData} 
-                  cx="50%" 
-                  cy="50%" 
-                  innerRadius={70}
-                  outerRadius={100} 
-                  fill="#8884d8" 
-                  dataKey="value"
-                  paddingAngle={5}
-                  label={({name, value}) => `${name}: ${value.toFixed(0)}%`}
-                >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => `${value.toFixed(1)}%`} />
-              </PieChart>
-            </ResponsiveContainer>
+            {pieData.some(d => d.value > 0) ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie 
+                    data={pieData} 
+                    cx="50%" 
+                    cy="50%" 
+                    innerRadius={70}
+                    outerRadius={100} 
+                    fill="#8884d8" 
+                    dataKey="value"
+                    paddingAngle={5}
+                    label={({name, value}) => value > 0 ? `${name}: ${value}%` : ''}
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => `${value}%`} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <Box textAlign="center" py={12}>
+                <Text color="gray.500">Complete coaching assessment to see your allocation</Text>
+              </Box>
+            )}
           </CardBody>
         </Card>
       </SimpleGrid>
 
       {alerts.length > 0 && (
-        <Card boxShadow="lg">
-          <CardHeader bgGradient="linear(to-r, yellow.500, orange.500)" color="white">
+        <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="2xl" border="1px solid rgba(255,255,255,0.5)">
+          <CardHeader bgGradient="linear(to-r, yellow.500, orange.500)" color="white" borderRadius="lg">
             <Heading size="md">Recent Alerts</Heading>
           </CardHeader>
           <CardBody>

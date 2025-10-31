@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Button, Heading, Card, CardBody, CardHeader, SimpleGrid, Text, Input, Select, VStack, HStack, Badge, Table, Thead, Tbody, Tr, Th, Td, Stat, StatLabel, StatNumber, StatHelpText, useToast } from '@chakra-ui/react';
+import { Box, Button, Heading, Card, CardBody, CardHeader, SimpleGrid, Text, Input, Select, VStack, HStack, Badge, Table, Thead, Tbody, Tr, Th, Td, Stat, StatLabel, StatNumber, StatHelpText, useToast, Icon } from '@chakra-ui/react';
 import { useAuth } from '../context/AuthContext.jsx';
+import { ViewIcon, ArrowDownIcon, ArrowUpIcon, ArrowForwardIcon } from '@chakra-ui/icons';
 
 export default function Wallet() {
   const { API_URL, token } = useAuth();
@@ -91,25 +92,29 @@ export default function Wallet() {
 
   return (
     <Box p={6}>
-      <Heading mb={6}>Crypto Wallet</Heading>
+      <Heading mb={2} bgGradient="linear(to-r, blue.600, purple.600)" bgClip="text">Crypto Wallet</Heading>
+      <Text color="gray.600" mb={6}>Manage your cryptocurrency assets</Text>
       
       <SimpleGrid columns={[1, 2, 3]} gap={6} mb={8}>
-        <Card>
+        <Card bgGradient="linear(to-br, blue.400, blue.600)" color="white" boxShadow="2xl">
           <CardBody>
             <Stat>
-              <StatLabel color="gray.600">Total Value</StatLabel>
-              <StatNumber color="green.500" fontSize="2xl">${totalValue.toLocaleString()}</StatNumber>
-              <StatHelpText>All Assets</StatHelpText>
+              <HStack mb={2}>
+                <Icon as={ViewIcon} />
+                <StatLabel opacity={0.9}>Total Value</StatLabel>
+              </HStack>
+              <StatNumber fontSize="3xl">${totalValue.toLocaleString()}</StatNumber>
+              <StatHelpText opacity={0.8}>All Assets</StatHelpText>
             </Stat>
           </CardBody>
         </Card>
         {Object.entries(wallet.balances || {}).map(([curr, bal]) => (
-          <Card key={curr}>
+          <Card key={curr} bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="xl" border="1px solid rgba(255,255,255,0.5)">
             <CardBody>
               <Stat>
-                <StatLabel color="gray.600">{curr}</StatLabel>
-                <StatNumber fontSize="2xl">{typeof bal === 'number' ? bal.toFixed(curr === 'USDC' ? 2 : 6) : 0}</StatNumber>
-                <StatHelpText>{curr === 'USDC' ? '$' : curr === 'BTC' ? 'Bitcoin' : 'Ethereum'}</StatHelpText>
+                <StatLabel color="gray.700">{curr}</StatLabel>
+                <StatNumber fontSize="2xl" color="blue.600">{typeof bal === 'number' ? bal.toFixed(curr === 'USDC' ? 2 : 6) : 0}</StatNumber>
+                <StatHelpText color="gray.600">{curr === 'USDC' ? '$' : curr === 'BTC' ? 'Bitcoin' : 'Ethereum'}</StatHelpText>
               </Stat>
             </CardBody>
           </Card>
@@ -117,8 +122,8 @@ export default function Wallet() {
       </SimpleGrid>
 
       <SimpleGrid columns={[1, 3]} gap={6} mb={8}>
-        <Card>
-          <CardHeader>
+        <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="xl" border="1px solid rgba(255,255,255,0.5)">
+          <CardHeader bgGradient="linear(to-r, green.500, teal.500)" color="white" borderRadius="lg">
             <Heading size="sm">Deposit</Heading>
           </CardHeader>
           <CardBody>
@@ -129,13 +134,13 @@ export default function Wallet() {
                 <option value="ETH">ETH</option>
               </Select>
               <Input type="number" placeholder="Amount" value={amount} onChange={e => setAmount(e.target.value)} />
-              <Button onClick={deposit} isLoading={loading} colorScheme="blue" w="full">Deposit</Button>
+              <Button onClick={deposit} isLoading={loading} colorScheme="green" w="full" leftIcon={<Icon as={ArrowDownIcon} />}>Deposit</Button>
             </VStack>
           </CardBody>
         </Card>
 
-        <Card>
-          <CardHeader>
+        <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="xl" border="1px solid rgba(255,255,255,0.5)">
+          <CardHeader bgGradient="linear(to-r, orange.500, red.500)" color="white" borderRadius="lg">
             <Heading size="sm">Withdraw</Heading>
           </CardHeader>
           <CardBody>
@@ -146,13 +151,13 @@ export default function Wallet() {
                 <option value="ETH">ETH</option>
               </Select>
               <Input type="number" placeholder="Amount" value={amount} onChange={e => setAmount(e.target.value)} />
-              <Button onClick={withdraw} isLoading={loading} colorScheme="orange" w="full">Withdraw</Button>
+              <Button onClick={withdraw} isLoading={loading} colorScheme="orange" w="full" leftIcon={<Icon as={ArrowUpIcon} />}>Withdraw</Button>
             </VStack>
           </CardBody>
         </Card>
 
-        <Card>
-          <CardHeader>
+        <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="xl" border="1px solid rgba(255,255,255,0.5)">
+          <CardHeader bgGradient="linear(to-r, purple.500, pink.500)" color="white" borderRadius="lg">
             <Heading size="sm">Transfer</Heading>
           </CardHeader>
           <CardBody>
@@ -164,14 +169,14 @@ export default function Wallet() {
               </Select>
               <Input placeholder="To Address" value={toAddress} onChange={e => setToAddress(e.target.value)} />
               <Input type="number" placeholder="Amount" value={amount} onChange={e => setAmount(e.target.value)} />
-              <Button onClick={transfer} isLoading={loading} colorScheme="green" w="full">Transfer</Button>
+              <Button onClick={transfer} isLoading={loading} colorScheme="purple" w="full" leftIcon={<Icon as={ArrowForwardIcon} />}>Transfer</Button>
             </VStack>
           </CardBody>
         </Card>
       </SimpleGrid>
 
-      <Card>
-        <CardHeader>
+      <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="xl" border="1px solid rgba(255,255,255,0.5)">
+        <CardHeader bgGradient="linear(to-r, indigo.500, blue.500)" color="white" borderRadius="lg">
           <Heading size="md">Transaction History</Heading>
         </CardHeader>
         <CardBody>
@@ -206,4 +211,3 @@ export default function Wallet() {
     </Box>
   );
 }
-
