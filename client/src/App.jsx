@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
-import { Box, Flex, Heading, Button, Spacer, IconButton, useColorMode, Drawer, DrawerBody, DrawerHeader, DrawerOverlay, DrawerContent, DrawerCloseButton, VStack } from '@chakra-ui/react';
-import { HamburgerIcon, MoonIcon, SunIcon } from '@chakra-ui/icons';
+import { Box, Flex, Heading, Button, Spacer, IconButton, Drawer, DrawerBody, DrawerHeader, DrawerOverlay, DrawerContent, DrawerCloseButton, VStack } from '@chakra-ui/react';
+import { HamburgerIcon } from '@chakra-ui/icons';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import Login from './pages/Login.jsx';
 import Signup from './pages/Signup.jsx';
@@ -19,7 +19,6 @@ import Profile from './pages/Profile.jsx';
 
 function NavBar() {
   const { user, logout } = useAuth();
-  const { colorMode, toggleColorMode } = useColorMode();
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   
@@ -41,12 +40,11 @@ function NavBar() {
 
   return (
     <>
-      <Flex p={4} borderBottom="1px solid" borderColor={colorMode === 'dark' ? 'gray.700' : 'gray.200'} align="center" bg={colorMode === 'dark' ? 'gray.800' : 'white'} boxShadow="sm">
+      <Flex p={4} borderBottom="1px solid #e2e8f0" align="center" bg="white" boxShadow="sm">
         <Heading size="md" bgGradient="linear(to-r, blue.500, purple.500)" bgClip="text">
           One-Fourth Finance
         </Heading>
         <Spacer />
-        <IconButton icon={colorMode === 'dark' ? <SunIcon /> : <MoonIcon />} onClick={toggleColorMode} variant="ghost" mr={2} />
         {user ? (
           <>
             <Box display={{ base: 'none', md: 'flex' }}>
@@ -121,5 +119,3 @@ export default function App() {
     </AuthProvider>
   );
 }
-
-
