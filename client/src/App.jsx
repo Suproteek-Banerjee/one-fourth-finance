@@ -1,6 +1,7 @@
-import React from 'react';
-import { Routes, Route, Navigate, Link } from 'react-router-dom';
-import { Box, Flex, Heading, Button, Spacer } from '@chakra-ui/react';
+import React, { useState } from 'react';
+import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+import { Box, Flex, Heading, Button, Spacer, IconButton, useColorMode, Drawer, DrawerBody, DrawerHeader, DrawerOverlay, DrawerContent, DrawerCloseButton, VStack } from '@chakra-ui/react';
+import { HamburgerIcon, MoonIcon, SunIcon } from '@chakra-ui/icons';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import Login from './pages/Login.jsx';
 import Signup from './pages/Signup.jsx';
@@ -18,33 +19,72 @@ import Profile from './pages/Profile.jsx';
 
 function NavBar() {
   const { user, logout } = useAuth();
+  const { colorMode, toggleColorMode } = useColorMode();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const location = useLocation();
+  
+  const navLinks = user ? [
+    { to: '/dashboard', label: 'Dashboard' },
+    { to: '/wallet', label: 'Wallet' },
+    { to: '/coaching', label: 'Coaching' },
+    { to: '/microfinance', label: 'Loans' },
+    { to: '/insurance', label: 'Insurance' },
+    { to: '/real-estate', label: 'Real Estate' },
+    { to: '/pension', label: 'Pension' },
+    { to: '/fraud', label: 'Fraud' },
+    ...(user.role === 'admin' ? [{ to: '/admin', label: 'Admin' }] : []),
+    { to: '/profile', label: 'Profile' }
+  ] : [
+    { to: '/login', label: 'Login' },
+    { to: '/signup', label: 'Sign Up' }
+  ];
+
   return (
-    <Flex p={4} borderBottom="1px solid #e2e8f0" align="center" bg="white" boxShadow="sm">
-      <Heading size="md" bgGradient="linear(to-r, blue.500, purple.500)" bgClip="text">
-        One-Fourth Finance
-      </Heading>
-      <Spacer />
-      {user ? (
-        <>
-          <Button as={Link} to="/dashboard" variant="ghost">Dashboard</Button>
-          <Button as={Link} to="/wallet" variant="ghost">Wallet</Button>
-          <Button as={Link} to="/coaching" variant="ghost">Coaching</Button>
-          <Button as={Link} to="/microfinance" variant="ghost">Loans</Button>
-          <Button as={Link} to="/insurance" variant="ghost">Insurance</Button>
-          <Button as={Link} to="/real-estate" variant="ghost">Real Estate</Button>
-          <Button as={Link} to="/pension" variant="ghost">Pension</Button>
-          <Button as={Link} to="/fraud" variant="ghost">Fraud</Button>
-          {user.role === 'admin' && <Button as={Link} to="/admin" variant="ghost" colorScheme="purple">Admin</Button>}
-          <Button as={Link} to="/profile" variant="ghost">Profile</Button>
-          <Button ml={2} onClick={logout} colorScheme="blue">Logout</Button>
-        </>
-      ) : (
-        <>
-          <Button as={Link} to="/login" variant="ghost">Login</Button>
-          <Button as={Link} to="/signup" variant="solid" colorScheme="blue">Sign Up</Button>
-        </>
-      )}
-    </Flex>
+    <>
+      <Flex p={4} borderBottom="1px solid" borderColor={colorMode === 'dark' ? 'gray.700' : 'gray.200'} align="center" bg={colorMode === 'dark' ? 'gray.800' : 'white'} boxShadow="sm">
+        <Heading size="md" bgGradient="linear(to-r, blue.500, purple.500)" bgClip="text">
+          One-Fourth Finance
+        </Heading>
+        <Spacer />
+        <IconButton icon={colorMode === 'dark' ? <SunIcon /> : <MoonIcon />} onClick={toggleColorMode} variant="ghost" mr={2} />
+        {user ? (
+          <>
+            <Box display={{ base: 'none', md: 'flex' }}>
+              {navLinks.map(link => (
+                <Button key={link.to} as={Link} to={link.to} variant="ghost" isActive={location.pathname === link.to} size="sm">
+                  {link.label}
+                </Button>
+              ))}
+              <Button ml={2} onClick={logout} colorScheme="blue" size="sm">Logout</Button>
+            </Box>
+            <IconButton display={{ base: 'flex', md: 'none' }} icon={<HamburgerIcon />} onClick={() => setMobileOpen(true)} variant="ghost" />
+          </>
+        ) : (
+          <>
+            <Button as={Link} to="/login" variant="ghost" size="sm">Login</Button>
+            <Button as={Link} to="/signup" variant="solid" colorScheme="blue" size="sm" ml={2}>Sign Up</Button>
+          </>
+        )}
+      </Flex>
+
+      <Drawer isOpen={mobileOpen} placement="right" onClose={() => setMobileOpen(false)}>
+        <DrawerOverlay />
+        <DrawerContent>
+          <DrawerCloseButton />
+          <DrawerHeader>Menu</DrawerHeader>
+          <DrawerBody>
+            <VStack align="stretch" spacing={2}>
+              {navLinks.map(link => (
+                <Button key={link.to} as={Link} to={link.to} variant={location.pathname === link.to ? 'solid' : 'ghost'} w="full" justifyContent="flex-start" onClick={() => setMobileOpen(false)}>
+                  {link.label}
+                </Button>
+              ))}
+              <Button onClick={logout} colorScheme="red" mt={4} w="full">Logout</Button>
+            </VStack>
+          </DrawerBody>
+        </DrawerContent>
+      </Drawer>
+    </>
   );
 }
 
