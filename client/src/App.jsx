@@ -17,8 +17,10 @@ import Admin from './pages/Admin.jsx';
 function NavBar() {
   const { user, logout } = useAuth();
   return (
-    <Flex p={4} borderBottom="1px solid #eee" align="center">
-      <Heading size="md">One-Fourth Finance</Heading>
+    <Flex p={4} borderBottom="1px solid #e2e8f0" align="center" bg="white" boxShadow="sm">
+      <Heading size="md" bgGradient="linear(to-r, blue.500, purple.500)" bgClip="text">
+        One-Fourth Finance
+      </Heading>
       <Spacer />
       {user ? (
         <>
@@ -30,13 +32,13 @@ function NavBar() {
           <Button as={Link} to="/insurance" variant="ghost">Insurance</Button>
           <Button as={Link} to="/real-estate" variant="ghost">Real Estate</Button>
           <Button as={Link} to="/fraud" variant="ghost">Fraud</Button>
-          {user.role === 'admin' && <Button as={Link} to="/admin" variant="ghost">Admin</Button>}
-          <Button ml={2} onClick={logout}>Logout</Button>
+          {user.role === 'admin' && <Button as={Link} to="/admin" variant="ghost" colorScheme="purple">Admin</Button>}
+          <Button ml={2} onClick={logout} colorScheme="blue">Logout</Button>
         </>
       ) : (
         <>
           <Button as={Link} to="/login" variant="ghost">Login</Button>
-          <Button as={Link} to="/signup" variant="solid">Sign Up</Button>
+          <Button as={Link} to="/signup" variant="solid" colorScheme="blue">Sign Up</Button>
         </>
       )}
     </Flex>
@@ -52,7 +54,7 @@ function ProtectedRoute({ children }) {
 export default function App() {
   return (
     <AuthProvider>
-      <Box>
+      <Box minH="100vh" bg="gray.50">
         <NavBar />
         <Box p={6}>
           <Routes>
