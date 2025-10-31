@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Box, Button, Heading, SimpleGrid, Slider, SliderFilledTrack, SliderThumb, SliderTrack, Text, Card, CardBody, CardHeader, VStack, Progress, Badge, HStack, Icon, Alert, AlertIcon, AlertDescription } from '@chakra-ui/react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, Area, AreaChart, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import { ArrowUpIcon, ShieldIcon, InfoIcon, ChevronRightIcon } from '@chakra-ui/icons';
+import { ArrowUpIcon, InfoIcon, ChevronRightIcon } from '@chakra-ui/icons';
 
 const questions = [
   { text: 'How comfortable are you with investment risk?', emoji: '🎲', options: ['Very Conservative', 'Conservative', 'Balanced', 'Aggressive', 'Very Aggressive'] },
