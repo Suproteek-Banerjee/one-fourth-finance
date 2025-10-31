@@ -65,12 +65,13 @@ router.get('/options', (req, res) => {
 router.post('/buy', requireAuth, (req, res) => {
   const { type, symbol, amount, shares } = req.body;
   
-  if (!type || !symbol || !amount) return res.status(400).json({ error: 'Missing fields' });
+  if (!type || !symbol) return res.status(400).json({ error: 'Missing type or symbol' });
 
   const currentPrice = getMarketPrice(type, symbol);
   
-  // For stocks, we need shares
+  // For stocks, we need shares; for bonds/crypto, we need amount
   if (type === 'stock' && !shares) return res.status(400).json({ error: 'Shares required for stocks' });
+  if ((type === 'bond' || type === 'crypto') && !amount) return res.status(400).json({ error: 'Amount required' });
 
   // Calculate shares for stocks or amount for bonds/crypto
   const investment = {

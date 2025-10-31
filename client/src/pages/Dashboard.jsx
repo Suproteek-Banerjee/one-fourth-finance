@@ -40,7 +40,9 @@ export default function Dashboard() {
   // Calculate allocation from investments
   const allocation = investments.reduce((acc, inv) => {
     const val = inv.type === 'stock' ? inv.shares * inv.currentPrice : inv.type === 'bond' ? inv.amount : inv.amount * inv.currentPrice;
-    acc[inv.type] = (acc[inv.type] || 0) + val;
+    // Map investment type to plural key
+    const key = inv.type === 'stock' ? 'stocks' : inv.type === 'bond' ? 'bonds' : 'crypto';
+    acc[key] = (acc[key] || 0) + val;
     return acc;
   }, { stocks: 0, bonds: 0, crypto: 0 });
   
