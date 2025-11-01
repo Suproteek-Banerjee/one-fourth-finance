@@ -39,16 +39,57 @@ export default function Microfinance() {
       return;
     }
 
-    // Simple approval logic
-    const debtToIncome = (amount / income) * 12;
-    const approved = debtToIncome < 0.5 && creditScore >= 600;
-    const probability = creditScore >= 700 ? 0.9 : creditScore >= 650 ? 0.7 : creditScore >= 600 ? 0.5 : 0.3;
+    const loanAmount = Number(amount);
+    const monthlyIncome = Number(income);
+    const score = Number(creditScore);
+
+    // Check loan amount cap
+    const MAX_LOAN_AMOUNT = 6500;
+    if (loanAmount > MAX_LOAN_AMOUNT) {
+      toast({ 
+        title: 'Loan Amount Too High', 
+        status: 'error', 
+        description: `Maximum loan amount is $${MAX_LOAN_AMOUNT.toLocaleString()}` 
+      });
+      setResult({
+        approved: false,
+        approvalProbability: 0,
+        rejectionReasons: [`Loan amount exceeds maximum of $${MAX_LOAN_AMOUNT.toLocaleString()}`],
+        suggestedRate: 0.25,
+        suggestedAmount: MAX_LOAN_AMOUNT
+      });
+      return;
+    }
+
+    // Calculate approval criteria
+    const debtToIncomeRatio = (loanAmount / monthlyIncome) * 12; // Annual debt-to-income
+    const maxDebtToIncome = 0.5; // 50% maximum
+    const minCreditScore = 600;
+
+    // Determine rejection reasons
+    const rejectionReasons = [];
+    let approved = true;
+
+    if (score < minCreditScore) {
+      approved = false;
+      rejectionReasons.push(`Credit score too low (${score} < ${minCreditScore} minimum)`);
+    }
+
+    if (debtToIncomeRatio >= maxDebtToIncome) {
+      approved = false;
+      rejectionReasons.push(`Debt-to-income ratio too high (${(debtToIncomeRatio * 100).toFixed(1)}% >= ${(maxDebtToIncome * 100)}% maximum)`);
+    }
+
+    // Calculate probability based on credit score
+    const probability = score >= 700 ? 0.9 : score >= 650 ? 0.7 : score >= 600 ? 0.5 : 0.3;
 
     setResult({
       approved,
       approvalProbability: probability,
+      rejectionReasons: approved ? [] : rejectionReasons,
       suggestedRate: approved ? 0.15 : 0.25,
-      suggestedAmount: approved ? amount : amount * 0.8
+      suggestedAmount: approved ? loanAmount : Math.min(loanAmount * 0.8, MAX_LOAN_AMOUNT),
+      debtToIncomeRatio: (debtToIncomeRatio * 100).toFixed(1) + '%'
     });
 
     if (approved) {
@@ -56,7 +97,7 @@ export default function Microfinance() {
         ...myLoans,
         borrower: [...myLoans.borrower, {
           id: Date.now().toString(),
-          amount: amount,
+          amount: loanAmount,
           rate: 0.15,
           termMonths: 12,
           status: 'active',
@@ -68,9 +109,20 @@ export default function Microfinance() {
       localStorage.setItem('off_loans', JSON.stringify(updatedLoans));
       // Dispatch event to notify Profile page
       window.dispatchEvent(new Event('loansUpdated'));
+      toast({ 
+        title: 'Loan Approved!', 
+        status: 'success', 
+        description: `Your loan application has been approved. Rate: 15%` 
+      });
+    } else {
+      const reasonsText = rejectionReasons.join('. ');
+      toast({ 
+        title: 'Loan Rejected', 
+        status: 'error', 
+        description: reasonsText,
+        duration: 6000
+      });
     }
-
-    toast({ title: approved ? 'Loan Approved!' : 'Loan Rejected', status: approved ? 'success' : 'error', description: `Probability: ${Math.round(probability * 100)}%` });
   }
 
   function fund(loanId) {
@@ -130,8 +182,8 @@ export default function Microfinance() {
           <CardBody>
             <VStack align="stretch" spacing={4}>
               <Box>
-                <Text mb={2} fontWeight="medium">Loan Amount ($)</Text>
-                <Input type="number" value={amount} onChange={e => setAmount(e.target.value)} />
+                <Text mb={2} fontWeight="medium">Loan Amount ($) - Max: $6,500</Text>
+                <Input type="number" value={amount} onChange={e => setAmount(e.target.value)} max={6500} min={100} />
               </Box>
               <Box>
                 <Text mb={2} fontWeight="medium">Monthly Income ($)</Text>
@@ -145,13 +197,39 @@ export default function Microfinance() {
               
               {result && (
                 <Box p={4} bg={result.approved ? 'green.50' : 'red.50'} borderRadius="md" border="1px solid" borderColor={result.approved ? 'green.200' : 'red.200'}>
-                  <Text fontWeight="bold" mb={2}>{result.approved ? '✓ Approved' : '✗ Rejected'}</Text>
-                  <Text fontSize="sm">Approval Probability: {Math.round(result.approvalProbability * 100)}%</Text>
-                  {result.approved && (
+                  <Text fontWeight="bold" mb={2} fontSize="lg">{result.approved ? '✓ Approved' : '✗ Rejected'}</Text>
+                  <Text fontSize="sm" mb={2}>Approval Probability: {Math.round(result.approvalProbability * 100)}%</Text>
+                  
+                  {result.approved ? (
                     <VStack align="stretch" mt={2} spacing={1}>
                       <Text fontSize="sm">Suggested Rate: {(result.suggestedRate * 100).toFixed(1)}%</Text>
-                      <Text fontSize="sm">Suggested Amount: ${result.suggestedAmount}</Text>
+                      <Text fontSize="sm">Suggested Amount: ${result.suggestedAmount.toLocaleString()}</Text>
                     </VStack>
+                  ) : (
+                    <Box mt={3}>
+                      <Text fontSize="sm" fontWeight="bold" mb={2} color="red.700">Rejection Reasons:</Text>
+                      {result.rejectionReasons && result.rejectionReasons.length > 0 ? (
+                        <VStack align="stretch" spacing={1}>
+                          {result.rejectionReasons.map((reason, idx) => (
+                            <Text key={idx} fontSize="sm" color="red.600">
+                              • {reason}
+                            </Text>
+                          ))}
+                        </VStack>
+                      ) : (
+                        <Text fontSize="sm" color="red.600">Loan application does not meet approval criteria</Text>
+                      )}
+                      {result.debtToIncomeRatio && (
+                        <Text fontSize="sm" mt={2} color="gray.600">
+                          Debt-to-Income Ratio: {result.debtToIncomeRatio}
+                        </Text>
+                      )}
+                      {result.suggestedAmount && result.suggestedAmount < Number(amount) && (
+                        <Text fontSize="sm" mt={2} color="blue.600" fontWeight="medium">
+                          Suggested Amount: ${result.suggestedAmount.toLocaleString()}
+                        </Text>
+                      )}
+                    </Box>
                   )}
                 </Box>
               )}
