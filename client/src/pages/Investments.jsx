@@ -130,7 +130,7 @@ export default function Investments() {
 
   function sell() {
     if (!sellAmount || !sellId) {
-      toast({ title: 'Please enter amount/shares to sell', status: 'warning' });
+      toast({ title: 'Please enter dollar amount to sell', status: 'warning' });
       return;
     }
     
@@ -140,36 +140,77 @@ export default function Investments() {
       return;
     }
 
+    // Get current price
+    let currentPrice;
+    if (investment.type === 'stock') {
+      const option = options.stocks.find(o => o.symbol === investment.symbol);
+      currentPrice = option?.price || investment.currentPrice || investment.avgPrice;
+    } else if (investment.type === 'crypto') {
+      const option = options.crypto.find(o => o.symbol === investment.symbol);
+      currentPrice = option?.price || investment.currentPrice || investment.avgPrice;
+    } else {
+      // For bonds, amount is already in dollars
+      currentPrice = 1;
+    }
+
+    // sellAmount is in dollars, calculate how many shares/amount to sell
+    const dollarAmount = Number(sellAmount);
+    
     let updatedInvestments;
     if (investment.type === 'stock') {
-      if (Number(sellAmount) > investment.shares) {
-        toast({ title: 'Not enough funds', status: 'error', description: `You only have ${investment.shares.toFixed(4)} shares` });
+      const sharesToSell = dollarAmount / currentPrice;
+      const maxValue = investment.shares * currentPrice;
+      
+      if (dollarAmount > maxValue) {
+        toast({ title: 'Not enough funds', status: 'error', description: `You only have $${maxValue.toFixed(2)} worth (${investment.shares.toFixed(4)} shares)` });
         return;
       }
-      if (Number(sellAmount) === investment.shares) {
+      
+      if (sharesToSell >= investment.shares) {
+        // Sell everything
         updatedInvestments = investments.filter(inv => inv.id !== sellId);
       } else {
         updatedInvestments = investments.map(inv => 
-          inv.id === sellId ? { ...inv, shares: inv.shares - Number(sellAmount) } : inv
+          inv.id === sellId ? { ...inv, shares: inv.shares - sharesToSell } : inv
         );
       }
+      toast({ title: 'Sale successful!', status: 'success', description: `Sold ${sharesToSell.toFixed(4)} shares for $${dollarAmount.toFixed(2)}` });
+    } else if (investment.type === 'bond') {
+      // For bonds, sellAmount is already in dollars
+      if (dollarAmount > investment.amount) {
+        toast({ title: 'Not enough funds', status: 'error', description: `You only have $${investment.amount.toFixed(2)}` });
+        return;
+      }
+      if (dollarAmount >= investment.amount) {
+        updatedInvestments = investments.filter(inv => inv.id !== sellId);
+      } else {
+        updatedInvestments = investments.map(inv => 
+          inv.id === sellId ? { ...inv, amount: inv.amount - dollarAmount } : inv
+        );
+      }
+      toast({ title: 'Sale successful!', status: 'success', description: `Sold $${dollarAmount.toFixed(2)} worth of bonds` });
     } else {
-      if (Number(sellAmount) > investment.amount) {
-        toast({ title: 'Not enough funds', status: 'error', description: `You only have ${investment.amount.toFixed(6)} ${investment.symbol}` });
+      // Crypto: sellAmount is in dollars, calculate crypto amount
+      const cryptoToSell = dollarAmount / currentPrice;
+      const maxValue = investment.amount * currentPrice;
+      
+      if (dollarAmount > maxValue) {
+        toast({ title: 'Not enough funds', status: 'error', description: `You only have $${maxValue.toFixed(2)} worth (${investment.amount.toFixed(6)} ${investment.symbol})` });
         return;
       }
-      if (Number(sellAmount) === investment.amount) {
+      
+      if (cryptoToSell >= investment.amount) {
         updatedInvestments = investments.filter(inv => inv.id !== sellId);
       } else {
         updatedInvestments = investments.map(inv => 
-          inv.id === sellId ? { ...inv, amount: inv.amount - Number(sellAmount) } : inv
+          inv.id === sellId ? { ...inv, amount: inv.amount - cryptoToSell } : inv
         );
       }
+      toast({ title: 'Sale successful!', status: 'success', description: `Sold ${cryptoToSell.toFixed(6)} ${investment.symbol} for $${dollarAmount.toFixed(2)}` });
     }
 
     setInvestments(updatedInvestments);
     saveInvestments(updatedInvestments);
-    toast({ title: 'Sale successful!', status: 'success' });
     onClose();
     setSellAmount('');
     setSellId(null);
@@ -498,12 +539,57 @@ export default function Investments() {
           <ModalCloseButton />
           <ModalBody>
             <VStack align="stretch" spacing={4}>
-              <Input 
-                type="number" 
-                placeholder={selectedType === 'stock' ? 'Number of shares' : 'Amount'} 
-                value={sellAmount} 
-                onChange={e => setSellAmount(e.target.value)} 
-              />
+              {(() => {
+                const investment = investments.find(inv => inv.id === sellId);
+                if (!investment) return null;
+                
+                let currentPrice, maxValue, unit;
+                if (investment.type === 'stock') {
+                  const option = options.stocks.find(o => o.symbol === investment.symbol);
+                  currentPrice = option?.price || investment.currentPrice || investment.avgPrice;
+                  maxValue = investment.shares * currentPrice;
+                  unit = 'shares';
+                } else if (investment.type === 'crypto') {
+                  const option = options.crypto.find(o => o.symbol === investment.symbol);
+                  currentPrice = option?.price || investment.currentPrice || investment.avgPrice;
+                  maxValue = investment.amount * currentPrice;
+                  unit = investment.symbol;
+                } else {
+                  currentPrice = 1;
+                  maxValue = investment.amount;
+                  unit = 'dollars';
+                }
+                
+                const amountToSell = sellAmount ? (investment.type === 'stock' ? Number(sellAmount) / currentPrice : investment.type === 'crypto' ? Number(sellAmount) / currentPrice : Number(sellAmount)) : 0;
+                
+                return (
+                  <>
+                    <Box>
+                      <Text mb={2} fontWeight="medium">Available to sell:</Text>
+                      <Text fontSize="sm" color="gray.600">
+                        {investment.type === 'stock' && `${investment.shares.toFixed(4)} shares ($${maxValue.toFixed(2)})`}
+                        {investment.type === 'crypto' && `${investment.amount.toFixed(6)} ${investment.symbol} ($${maxValue.toFixed(2)})`}
+                        {investment.type === 'bond' && `$${investment.amount.toFixed(2)}`}
+                      </Text>
+                    </Box>
+                    <Input 
+                      type="number" 
+                      placeholder="Amount in USD ($)" 
+                      value={sellAmount} 
+                      onChange={e => setSellAmount(e.target.value)} 
+                    />
+                    {sellAmount && amountToSell > 0 && (
+                      <Text fontSize="sm" color="gray.600">
+                        You will sell: {
+                          investment.type === 'stock' ? `${amountToSell.toFixed(4)} shares` :
+                          investment.type === 'crypto' ? `${amountToSell.toFixed(6)} ${investment.symbol}` :
+                          `$${amountToSell.toFixed(2)}`
+                        }
+                      </Text>
+                    )}
+                  </>
+                );
+              })()}
             </VStack>
           </ModalBody>
           <ModalFooter>
