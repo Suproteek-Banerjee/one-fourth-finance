@@ -2,11 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { Box, Heading, SimpleGrid, Stat, StatHelpText, StatLabel, StatNumber, Card, CardBody, CardHeader, Text, Badge, VStack, HStack, Icon } from '@chakra-ui/react';
 import { AreaChart, Area, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useLocation } from 'react-router-dom';
 import { WarningIcon, CheckCircleIcon, ArrowUpIcon, ViewIcon, InfoIcon } from '@chakra-ui/icons';
 
 export default function Dashboard() {
   const { API_URL, token, loading: authLoading } = useAuth();
-  const [data, setData] = useState(null);
+  const location = useLocation();
+  const [data, setData] = useState({ portfolio: {}, investments: [], loans: [], policies: [], pension: null, alerts: [] });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -18,6 +20,8 @@ export default function Dashboard() {
         setData({ portfolio: {}, investments: [], loans: [], policies: [], pension: null, alerts: [] });
         return;
       }
+      
+      // Always reload data when navigating to this page
       setLoading(true);
       try {
         const res = await fetch(`${API_URL}/dashboard`, { headers: { Authorization: `Bearer ${token}` } });
@@ -27,7 +31,7 @@ export default function Dashboard() {
           setData({ portfolio: {}, investments: [], loans: [], policies: [], pension: null, alerts: [] });
         } else {
           const json = await res.json();
-          setData(json);
+          setData(json || { portfolio: {}, investments: [], loans: [], policies: [], pension: null, alerts: [] });
         }
       } catch (err) {
         console.error('Dashboard fetch error:', err);
@@ -37,8 +41,10 @@ export default function Dashboard() {
         setLoading(false);
       }
     }
+    
+    // Always load when component mounts, location changes, or dependencies change
     load();
-  }, [API_URL, token, authLoading]);
+  }, [API_URL, token, authLoading, location.pathname]);
 
   const investments = data?.investments || [];
   const portfolioValue = data?.portfolio?.value || 0;

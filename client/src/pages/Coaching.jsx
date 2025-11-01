@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Button, Heading, SimpleGrid, Slider, SliderFilledTrack, SliderThumb, SliderTrack, Text, Card, CardBody, CardHeader, VStack, Progress, Badge, HStack, Icon, Alert, AlertIcon, AlertDescription } from '@chakra-ui/react';
+import { Box, Button, Heading, SimpleGrid, Slider, SliderFilledTrack, SliderThumb, SliderTrack, Text, Card, CardBody, CardHeader, VStack, Progress, Badge, HStack, Icon, Alert, AlertIcon, AlertDescription, useToast } from '@chakra-ui/react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, Area, AreaChart, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { ArrowUpIcon, InfoIcon, ChevronRightIcon } from '@chakra-ui/icons';
@@ -14,6 +14,7 @@ const questions = [
 
 export default function Coaching() {
   const { API_URL, token, loading: authLoading } = useAuth();
+  const toast = useToast();
   const [answers, setAnswers] = useState([2, 2, 2, 2, 2]);
   const [allocation, setAllocation] = useState(null);
   const [sim, setSim] = useState(null);
@@ -27,17 +28,36 @@ export default function Coaching() {
   }
 
   async function assess() {
-    if (!token) return;
+    if (!token) {
+      toast({ title: 'Please wait for authentication', status: 'warning' });
+      return;
+    }
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/coaching/assess`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ answers }) });
+      const res = await fetch(`${API_URL}/coaching/assess`, { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, 
+        body: JSON.stringify({ answers }) 
+      });
       if (res.ok) {
         const data = await res.json();
-        setAllocation(data.allocation);
-        setRiskScore(data.score);
+        console.log('Assessment response:', data);
+        if (data.allocation && data.score !== undefined) {
+          setAllocation(data.allocation);
+          setRiskScore(data.score);
+          toast({ title: 'Recommendation generated!', status: 'success' });
+        } else {
+          console.error('Invalid response format:', data);
+          toast({ title: 'Invalid response from server', status: 'error' });
+        }
+      } else {
+        const errorText = await res.text();
+        console.error('Assessment API error:', res.status, errorText);
+        toast({ title: 'Failed to get recommendation', status: 'error', description: `Error ${res.status}` });
       }
     } catch (err) {
       console.error('Assessment failed:', err);
+      toast({ title: 'Network error', status: 'error', description: 'Could not connect to server' });
     } finally {
       setLoading(false);
     }
