@@ -13,13 +13,22 @@ const MOCK_MY_LOANS = {
   lender: []
 };
 
+// Get loans from localStorage or use default
+const getStoredLoans = () => {
+  try {
+    const stored = localStorage.getItem('off_loans');
+    if (stored) return JSON.parse(stored);
+  } catch (e) {}
+  return { borrower: MOCK_MY_LOANS.borrower, lender: MOCK_MY_LOANS.lender };
+};
+
 export default function Microfinance() {
   const toast = useToast();
   const [amount, setAmount] = useState(1000);
   const [income, setIncome] = useState(1200);
   const [creditScore, setCreditScore] = useState(680);
   const [result, setResult] = useState(null);
-  const [myLoans, setMyLoans] = useState(MOCK_MY_LOANS);
+  const [myLoans, setMyLoans] = useState(getStoredLoans());
   const [loans, setLoans] = useState(MOCK_LOANS);
   const [schedule, setSchedule] = useState([]);
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -43,7 +52,7 @@ export default function Microfinance() {
     });
 
     if (approved) {
-      setMyLoans({
+      const updatedLoans = {
         ...myLoans,
         borrower: [...myLoans.borrower, {
           id: Date.now().toString(),
@@ -54,7 +63,11 @@ export default function Microfinance() {
           funded: 0,
           purpose: 'New Loan'
         }]
-      });
+      };
+      setMyLoans(updatedLoans);
+      localStorage.setItem('off_loans', JSON.stringify(updatedLoans));
+      // Dispatch event to notify Profile page
+      window.dispatchEvent(new Event('loansUpdated'));
     }
 
     toast({ title: approved ? 'Loan Approved!' : 'Loan Rejected', status: approved ? 'success' : 'error', description: `Probability: ${Math.round(probability * 100)}%` });

@@ -11,9 +11,18 @@ const MOCK_ACCOUNT = {
   history: []
 };
 
+// Get pension from localStorage or use default
+const getStoredPension = () => {
+  try {
+    const stored = localStorage.getItem('off_pension');
+    if (stored) return JSON.parse(stored);
+  } catch (e) {}
+  return MOCK_ACCOUNT;
+};
+
 export default function Pension() {
   const toast = useToast();
-  const [account, setAccount] = useState(MOCK_ACCOUNT);
+  const [account, setAccount] = useState(getStoredPension());
   const [amount, setAmount] = useState(100);
   const [sim, setSim] = useState(null);
 
@@ -23,11 +32,16 @@ export default function Pension() {
       return;
     }
     
-    setAccount({
+    const updatedAccount = {
       ...account,
       balance: account.balance + Number(amount),
       history: [...account.history, { type: 'deposit', amount: Number(amount), ts: Date.now() }]
-    });
+    };
+    
+    setAccount(updatedAccount);
+    localStorage.setItem('off_pension', JSON.stringify(updatedAccount));
+    // Dispatch event to notify Profile page
+    window.dispatchEvent(new Event('pensionUpdated'));
     
     toast({ title: 'Deposit successful!', status: 'success', description: `Added $${amount} to your pension` });
     setAmount(100);
