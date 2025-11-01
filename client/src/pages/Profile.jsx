@@ -28,7 +28,13 @@ const getStoredInvestments = () => {
     const stored = localStorage.getItem('off_investments');
     if (stored) return JSON.parse(stored);
   } catch (e) {}
-  return [];
+  // Return default investments if nothing stored (matching Dashboard)
+  return [
+    { id: '1', type: 'stock', symbol: 'AAPL', shares: 5, avgPrice: 150, currentPrice: 175, ts: Date.now() - 86400000 },
+    { id: '2', type: 'stock', symbol: 'MSFT', shares: 3, avgPrice: 300, currentPrice: 380, ts: Date.now() - 86400000 },
+    { id: '3', type: 'bond', symbol: 'US10Y', amount: 5000, yield: 0.045, ts: Date.now() - 172800000 },
+    { id: '4', type: 'crypto', symbol: 'BTC', amount: 0.05, avgPrice: 45000, currentPrice: 45000, ts: Date.now() - 259200000 }
+  ];
 };
 
 // Get pension from localStorage or use default
@@ -65,13 +71,6 @@ export default function Profile() {
   const [kyc, setKyc] = useState(getStoredKYC());
   const [loading, setLoading] = useState(false);
   
-  // Load real data from localStorage
-  const [investments, setInvestments] = useState([]);
-  const [pension, setPension] = useState(null);
-  const [loans, setLoans] = useState({ borrower: [], lender: [] });
-  const [realEstateHoldings, setRealEstateHoldings] = useState([]);
-  const [refreshKey, setRefreshKey] = useState(0);
-  
   // Get real estate holdings from localStorage
   const getStoredRealEstate = () => {
     try {
@@ -80,6 +79,13 @@ export default function Profile() {
     } catch (e) {}
     return [];
   };
+  
+  // Load real data from localStorage - initialize with defaults immediately
+  const [investments, setInvestments] = useState(() => getStoredInvestments());
+  const [pension, setPension] = useState(() => getStoredPension());
+  const [loans, setLoans] = useState(() => getStoredLoans());
+  const [realEstateHoldings, setRealEstateHoldings] = useState(() => getStoredRealEstate());
+  const [refreshKey, setRefreshKey] = useState(0);
   
   useEffect(() => {
     // Load all data
