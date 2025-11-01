@@ -76,17 +76,28 @@ export default function Investments() {
       newInvestment.shares = Number(amount);
       newInvestment.avgPrice = option.price;
       newInvestment.currentPrice = option.price;
+      setInvestments([...investments, newInvestment]);
+      toast({ title: 'Purchase successful!', status: 'success', description: `Bought ${amount} shares` });
     } else if (selectedType === 'bond') {
       newInvestment.amount = Number(amount);
       newInvestment.yield = option.yield;
+      setInvestments([...investments, newInvestment]);
+      toast({ title: 'Purchase successful!', status: 'success', description: `Bought $${amount} in bonds` });
     } else {
-      newInvestment.amount = Number(amount);
+      // For crypto: amount is in dollars, calculate crypto amount
+      const dollarAmount = Number(amount);
+      const cryptoAmount = dollarAmount / option.price;
+      newInvestment.amount = cryptoAmount;
       newInvestment.avgPrice = option.price;
       newInvestment.currentPrice = option.price;
+      setInvestments([...investments, newInvestment]);
+      toast({ 
+        title: 'Purchase successful!', 
+        status: 'success', 
+        description: `Bought ${cryptoAmount.toFixed(6)} ${selectedSymbol} for $${dollarAmount.toFixed(2)}` 
+      });
     }
 
-    setInvestments([...investments, newInvestment]);
-    toast({ title: 'Purchase successful!', status: 'success', description: `Bought ${selectedType === 'stock' ? amount + ' shares' : amount + ' ' + selectedSymbol}` });
     setAmount('');
     setSelectedSymbol('');
   }
@@ -376,7 +387,17 @@ export default function Investments() {
                         </option>
                       ))}
                     </Select>
-                    <Input type="number" placeholder="Amount" value={amount} onChange={e => setAmount(e.target.value)} />
+                    <Input type="number" placeholder="Amount in USD ($)" value={amount} onChange={e => setAmount(e.target.value)} />
+                    {selectedSymbol && amount && (() => {
+                      const option = options.crypto.find(o => o.symbol === selectedSymbol);
+                      if (!option) return null;
+                      const cryptoAmount = Number(amount) / option.price;
+                      return (
+                        <Text fontSize="sm" color="gray.600">
+                          You will receive: {cryptoAmount.toFixed(6)} {selectedSymbol}
+                        </Text>
+                      );
+                    })()}
                     <Button onClick={buy} colorScheme="orange" leftIcon={<Icon as={ArrowUpIcon} />}>
                       Buy Crypto
                     </Button>
@@ -406,11 +427,12 @@ export default function Investments() {
                           const option = options.crypto.find(o => o.symbol === inv.symbol);
                           const currentPrice = option?.price || inv.currentPrice;
                           const value = inv.amount * currentPrice;
-                          const gain = value - (inv.amount * inv.avgPrice);
+                          const cost = inv.amount * inv.avgPrice;
+                          const gain = value - cost;
                           return (
                             <Tr key={inv.id}>
                               <Td fontWeight="bold">{inv.symbol}</Td>
-                              <Td>{inv.amount}</Td>
+                              <Td>{inv.amount.toFixed(6)}</Td>
                               <Td>${inv.avgPrice.toLocaleString()}</Td>
                               <Td>${currentPrice.toLocaleString()}</Td>
                               <Td color={gain >= 0 ? 'green.500' : 'red.500'}>${value.toFixed(2)}</Td>
