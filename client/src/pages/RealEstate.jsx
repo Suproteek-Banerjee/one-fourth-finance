@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Button, Heading, Input, Text, Card, CardBody, CardHeader, SimpleGrid, VStack, HStack, Badge, useToast } from '@chakra-ui/react';
+import { Box, Button, Heading, Input, Text, Card, CardBody, CardHeader, SimpleGrid, VStack, HStack, Badge, useToast, Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, useDisclosure } from '@chakra-ui/react';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 
 // Mock data - no API calls
@@ -30,10 +30,13 @@ const getStoredRealEstate = () => {
 
 export default function RealEstate() {
   const toast = useToast();
+  const { isOpen, onOpen, onClose } = useDisclosure();
   const [properties, setProperties] = useState(MOCK_PROPERTIES);
   const [holdings, setHoldings] = useState(getStoredRealEstate());
   const [selected, setSelected] = useState('');
   const [tokens, setTokens] = useState(100);
+  const [sellHoldingId, setSellHoldingId] = useState(null);
+  const [sellAmount, setSellAmount] = useState('');
 
   // Load holdings from localStorage on mount and listen for changes
   useEffect(() => {
@@ -103,6 +106,80 @@ export default function RealEstate() {
     toast({ title: 'Purchase successful!', status: 'success', description: `Purchased ${tokens} tokens` });
     setTokens(100);
     setSelected('');
+  }
+
+  function openSellModal(holding) {
+    setSellHoldingId(holding.id);
+    onOpen();
+  }
+
+  function sell() {
+    if (!sellAmount || !sellHoldingId) {
+      toast({ title: 'Please enter dollar amount to sell', status: 'warning' });
+      return;
+    }
+
+    const holding = holdings.find(h => h.id === sellHoldingId);
+    if (!holding) {
+      toast({ title: 'Holding not found', status: 'error' });
+      return;
+    }
+
+    const property = MOCK_PROPERTIES.find(p => p.id === holding.propertyId);
+    if (!property) {
+      toast({ title: 'Property not found', status: 'error' });
+      return;
+    }
+
+    // Calculate current value of holding
+    const holdingValue = (holding.tokens / property.tokensTotal) * property.price;
+    const pricePerToken = property.price / property.tokensTotal;
+    
+    // sellAmount is in dollars, calculate how many tokens to sell
+    const dollarAmount = Number(sellAmount);
+    const tokensToSell = dollarAmount / pricePerToken;
+    
+    if (dollarAmount > holdingValue) {
+      toast({ 
+        title: 'Not enough funds', 
+        status: 'error', 
+        description: `You only have $${holdingValue.toFixed(2)} worth (${holding.tokens.toLocaleString()} tokens)` 
+      });
+      return;
+    }
+    
+    let updatedHoldings;
+    if (tokensToSell >= holding.tokens) {
+      // Sell everything
+      updatedHoldings = holdings.filter(h => h.id !== sellHoldingId);
+    } else {
+      updatedHoldings = holdings.map(h => 
+        h.id === sellHoldingId ? { ...h, tokens: h.tokens - tokensToSell } : h
+      );
+    }
+
+    setHoldings(updatedHoldings);
+    
+    // Save to localStorage
+    const holdingsToSave = updatedHoldings.map(h => ({
+      id: h.id,
+      propertyId: h.propertyId,
+      tokens: h.tokens,
+      ts: h.ts
+    }));
+    localStorage.setItem('off_realestate', JSON.stringify(holdingsToSave));
+    
+    // Dispatch event to notify Dashboard
+    window.dispatchEvent(new Event('realEstateUpdated'));
+    
+    toast({ 
+      title: 'Sale successful!', 
+      status: 'success', 
+      description: `Sold ${tokensToSell.toFixed(2)} tokens for $${dollarAmount.toFixed(2)}` 
+    });
+    onClose();
+    setSellAmount('');
+    setSellHoldingId(null);
   }
 
   const selectedProperty = properties.find(p => p.id === selected);
@@ -181,9 +258,14 @@ export default function RealEstate() {
                             <Text fontSize="sm" color="gray.600">Tokens Owned: {holding.tokens.toLocaleString()}</Text>
                             <Text fontSize="sm" color="blue.600" fontWeight="medium">Value: ${investmentValue.toLocaleString()}</Text>
                           </Box>
-                          <Badge colorScheme="green" fontSize="md" px={4} py={2}>
-                            {Math.round(property.roi * 100)}% ROI
-                          </Badge>
+                          <VStack spacing={2}>
+                            <Badge colorScheme="green" fontSize="md" px={4} py={2}>
+                              {Math.round(property.roi * 100)}% ROI
+                            </Badge>
+                            <Button size="sm" onClick={() => openSellModal(holding)} colorScheme="red">
+                              Sell
+                            </Button>
+                          </VStack>
                         </HStack>
                       </CardBody>
                     </Card>
@@ -235,11 +317,14 @@ export default function RealEstate() {
                   return null;
                 };
 
-                // Custom label function
+                // Custom label function with better alignment
                 const renderLabel = (entry) => {
                   const percentage = totalValue > 0 ? ((entry.value / totalValue) * 100).toFixed(1) : 0;
                   return `${percentage}%`;
                 };
+                
+                // Custom label line style for better alignment
+                const labelLine = { stroke: '#888', strokeWidth: 1 };
 
                 if (pieData.length > 0) {
                   return (
@@ -253,6 +338,7 @@ export default function RealEstate() {
                           fill="#8884d8" 
                           dataKey="value" 
                           label={renderLabel}
+                          labelLine={labelLine}
                         >
                           {pieData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
@@ -275,6 +361,56 @@ export default function RealEstate() {
           </Card>
         </SimpleGrid>
       )}
+
+      <Modal isOpen={isOpen} onClose={onClose}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Sell Real Estate Tokens</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <VStack align="stretch" spacing={4}>
+              {(() => {
+                const holding = holdings.find(h => h.id === sellHoldingId);
+                if (!holding) return null;
+                
+                const property = MOCK_PROPERTIES.find(p => p.id === holding.propertyId);
+                if (!property) return null;
+                
+                const pricePerToken = property.price / property.tokensTotal;
+                const holdingValue = (holding.tokens / property.tokensTotal) * property.price;
+                const tokensToSell = sellAmount ? Number(sellAmount) / pricePerToken : 0;
+                
+                return (
+                  <>
+                    <Box>
+                      <Text mb={2} fontWeight="medium">Property: {property.title}</Text>
+                      <Text mb={2} fontWeight="medium">Available to sell:</Text>
+                      <Text fontSize="sm" color="gray.600">
+                        {holding.tokens.toLocaleString()} tokens (${holdingValue.toFixed(2)})
+                      </Text>
+                    </Box>
+                    <Input 
+                      type="number" 
+                      placeholder="Amount in USD ($)" 
+                      value={sellAmount} 
+                      onChange={e => setSellAmount(e.target.value)} 
+                    />
+                    {sellAmount && tokensToSell > 0 && (
+                      <Text fontSize="sm" color="gray.600">
+                        You will sell: {tokensToSell.toFixed(2)} tokens
+                      </Text>
+                    )}
+                  </>
+                );
+              })()}
+            </VStack>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={onClose}>Cancel</Button>
+            <Button colorScheme="red" onClick={sell}>Sell</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 }

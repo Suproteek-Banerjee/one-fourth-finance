@@ -202,6 +202,9 @@ export default function Dashboard() {
     return `${entry.value}%`;
   };
   
+  // Custom label line style for better alignment
+  const labelLine = { stroke: '#888', strokeWidth: 1 };
+  
   // Custom tooltip to show dollar amounts
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
@@ -301,6 +304,7 @@ export default function Dashboard() {
                     fill="#8884d8" 
                     dataKey="value" 
                     label={renderLabel}
+                    labelLine={labelLine}
                   >
                     {fullPieData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
