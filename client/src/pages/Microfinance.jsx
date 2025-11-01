@@ -8,7 +8,7 @@ const MOCK_LOANS = [
 
 const MOCK_MY_LOANS = {
   borrower: [
-    { id: '2', amount: 1000, rate: 0.15, termMonths: 12, status: 'active', funded: 1000, purpose: 'Education' }
+    { id: '2', amount: 1000, rate: 0.15, termMonths: 12, status: 'active', funded: 1000, paid: 0, remaining: 1000, purpose: 'Education' }
   ],
   lender: []
 };
@@ -32,6 +32,9 @@ export default function Microfinance() {
   const [loans, setLoans] = useState(MOCK_LOANS);
   const [schedule, setSchedule] = useState([]);
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const { isOpen: isPayOpen, onOpen: onPayOpen, onClose: onPayClose } = useDisclosure();
+  const [payLoanId, setPayLoanId] = useState(null);
+  const [payAmount, setPayAmount] = useState('');
 
   function apply() {
     if (!amount || !income || !creditScore) {
@@ -102,6 +105,8 @@ export default function Microfinance() {
           termMonths: 12,
           status: 'active',
           funded: 0,
+          paid: 0,
+          remaining: loanAmount,
           purpose: 'New Loan'
         }]
       };
@@ -132,17 +137,86 @@ export default function Microfinance() {
     const newFunded = Math.min(loan.funded + 200, loan.amount);
     setLoans(loans.map(l => l.id === loanId ? { ...l, funded: newFunded } : l));
 
-    setMyLoans({
+    const updatedLoans = {
       ...myLoans,
       lender: [...myLoans.lender, {
         id: Date.now().toString(),
         loanId: loanId,
         amount: 200,
-        status: 'active'
+        status: 'active',
+        fundedAt: Date.now()
       }]
-    });
+    };
+    
+    setMyLoans(updatedLoans);
+    localStorage.setItem('off_loans', JSON.stringify(updatedLoans));
+    window.dispatchEvent(new Event('loansUpdated'));
 
     toast({ title: 'Successfully funded $200!', status: 'success' });
+  }
+
+  function openPayModal(loanId) {
+    setPayLoanId(loanId);
+    onPayOpen();
+  }
+
+  function payLoan() {
+    if (!payAmount || !payLoanId) {
+      toast({ title: 'Please enter payment amount', status: 'warning' });
+      return;
+    }
+
+    const loan = myLoans.borrower.find(l => l.id === payLoanId);
+    if (!loan) {
+      toast({ title: 'Loan not found', status: 'error' });
+      return;
+    }
+
+    const paymentAmount = Number(payAmount);
+    const remainingBalance = loan.remaining || (loan.amount - (loan.paid || 0));
+
+    if (paymentAmount <= 0) {
+      toast({ title: 'Payment amount must be greater than 0', status: 'warning' });
+      return;
+    }
+
+    if (paymentAmount > remainingBalance) {
+      toast({ 
+        title: 'Payment exceeds remaining balance', 
+        status: 'error', 
+        description: `You only have $${remainingBalance.toFixed(2)} remaining` 
+      });
+      return;
+    }
+
+    const newPaid = (loan.paid || 0) + paymentAmount;
+    const newRemaining = remainingBalance - paymentAmount;
+    const newStatus = newRemaining <= 0 ? 'paid' : 'active';
+
+    const updatedLoans = {
+      ...myLoans,
+      borrower: myLoans.borrower.map(l => 
+        l.id === payLoanId 
+          ? { ...l, paid: newPaid, remaining: newRemaining, status: newStatus }
+          : l
+      )
+    };
+
+    setMyLoans(updatedLoans);
+    localStorage.setItem('off_loans', JSON.stringify(updatedLoans));
+    window.dispatchEvent(new Event('loansUpdated'));
+
+    toast({ 
+      title: 'Payment successful!', 
+      status: 'success', 
+      description: newStatus === 'paid' 
+        ? 'Loan fully paid off!' 
+        : `Paid $${paymentAmount.toFixed(2)}. Remaining: $${newRemaining.toFixed(2)}` 
+    });
+
+    onPayClose();
+    setPayAmount('');
+    setPayLoanId(null);
   }
 
   function viewSchedule(loanId) {
@@ -284,18 +358,46 @@ export default function Microfinance() {
                       </Tr>
                     </Thead>
                     <Tbody>
-                      {myLoans.borrower.map(loan => (
-                        <Tr key={loan.id}>
-                          <Td>${loan.amount}</Td>
-                          <Td>{(loan.rate * 100).toFixed(1)}%</Td>
-                          <Td>{loan.termMonths} months</Td>
-                          <Td>${loan.funded} / ${loan.amount}</Td>
-                          <Td><Badge colorScheme="green">{loan.status}</Badge></Td>
-                          <Td>
-                            <Button size="sm" onClick={() => viewSchedule(loan.id)} variant="outline">View Schedule</Button>
-                          </Td>
-                        </Tr>
-                      ))}
+                      {myLoans.borrower.map(loan => {
+                        const remaining = loan.remaining || (loan.amount - (loan.paid || 0));
+                        return (
+                          <Tr key={loan.id}>
+                            <Td>${loan.amount.toLocaleString()}</Td>
+                            <Td>{(loan.rate * 100).toFixed(1)}%</Td>
+                            <Td>{loan.termMonths} months</Td>
+                            <Td>${loan.funded} / ${loan.amount}</Td>
+                            <Td>
+                              <VStack spacing={1} align="start">
+                                <Badge colorScheme={loan.status === 'paid' ? 'gray' : 'green'}>{loan.status}</Badge>
+                                <Text fontSize="xs" color="gray.600">
+                                  Remaining: ${remaining.toFixed(2)}
+                                </Text>
+                              </VStack>
+                            </Td>
+                            <Td>
+                              <HStack spacing={2}>
+                                <Button 
+                                  size="sm" 
+                                  onClick={() => viewSchedule(loan.id)} 
+                                  variant="outline"
+                                  isDisabled={loan.status === 'paid'}
+                                >
+                                  View Schedule
+                                </Button>
+                                {loan.status !== 'paid' && (
+                                  <Button 
+                                    size="sm" 
+                                    onClick={() => openPayModal(loan.id)} 
+                                    colorScheme="blue"
+                                  >
+                                    Pay
+                                  </Button>
+                                )}
+                              </HStack>
+                            </Td>
+                          </Tr>
+                        );
+                      })}
                     </Tbody>
                   </Table>
                 ) : (
@@ -367,6 +469,59 @@ export default function Microfinance() {
           </ModalBody>
           <ModalFooter>
             <Button onClick={onClose}>Close</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      <Modal isOpen={isPayOpen} onClose={onPayClose}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Pay Loan</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <VStack align="stretch" spacing={4}>
+              {(() => {
+                const loan = myLoans.borrower.find(l => l.id === payLoanId);
+                if (!loan) return null;
+                
+                const remaining = loan.remaining || (loan.amount - (loan.paid || 0));
+                const paymentPreview = payAmount ? Number(payAmount) : 0;
+                const newRemaining = remaining - paymentPreview;
+                
+                return (
+                  <>
+                    <Box>
+                      <Text mb={2} fontWeight="medium">Loan Details:</Text>
+                      <Text fontSize="sm" color="gray.600">Original Amount: ${loan.amount.toLocaleString()}</Text>
+                      <Text fontSize="sm" color="gray.600">Paid: ${(loan.paid || 0).toFixed(2)}</Text>
+                      <Text fontSize="sm" color="gray.600" fontWeight="bold">Remaining: ${remaining.toFixed(2)}</Text>
+                    </Box>
+                    <Input 
+                      type="number" 
+                      placeholder="Payment amount in USD ($)" 
+                      value={payAmount} 
+                      onChange={e => setPayAmount(e.target.value)} 
+                    />
+                    {payAmount && paymentPreview > 0 && (
+                      <Box p={3} bg="blue.50" borderRadius="md">
+                        <Text fontSize="sm" color="gray.700">
+                          After payment: ${Math.max(0, newRemaining).toFixed(2)} remaining
+                        </Text>
+                        {newRemaining <= 0 && (
+                          <Text fontSize="sm" color="green.600" fontWeight="bold" mt={1}>
+                            This will fully pay off the loan!
+                          </Text>
+                        )}
+                      </Box>
+                    )}
+                  </>
+                );
+              })()}
+            </VStack>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={onPayClose}>Cancel</Button>
+            <Button colorScheme="blue" onClick={payLoan}>Pay</Button>
           </ModalFooter>
         </ModalContent>
       </Modal>

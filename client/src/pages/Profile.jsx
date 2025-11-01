@@ -191,8 +191,15 @@ export default function Profile() {
   }, [realEstateHoldings, refreshKey]);
   
   const pensionBalance = pension?.balance || 0;
-  const totalDebt = loans.borrower.reduce((sum, loan) => sum + (loan.amount - (loan.funded || 0)), 0);
+  // Calculate total debt based on remaining balance (not just funded amount)
+  const totalDebt = loans.borrower.reduce((sum, loan) => {
+    const remaining = loan.remaining || (loan.amount - (loan.paid || 0));
+    return sum + Math.max(0, remaining);
+  }, 0);
   const totalInvested = investmentValue + pensionBalance + realEstateValue;
+  
+  // Calculate total lent amount (loans you've funded as a lender)
+  const totalLent = loans.lender.reduce((sum, lending) => sum + (lending.amount || 0), 0);
 
   // Generate realistic account performance data based on actual investments
   // Simulate 30 days of realistic market movements
@@ -415,6 +422,48 @@ export default function Profile() {
           </CardBody>
         </Card>
       </SimpleGrid>
+
+      {totalLent > 0 && (
+        <SimpleGrid columns={[1, 2, 3]} gap={6} mb={8}>
+          <Card bgGradient="linear(to-br, teal.400, teal.600)" color="white" boxShadow="xl">
+            <CardBody>
+              <Stat>
+                <StatLabel color="white" opacity={0.9}>Total Lent</StatLabel>
+                <StatNumber fontSize="3xl">${totalLent.toLocaleString()}</StatNumber>
+                <StatHelpText color="white" opacity={0.8}>Loans Funded</StatHelpText>
+              </Stat>
+            </CardBody>
+          </Card>
+          
+          <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="xl" border="1px solid rgba(255,255,255,0.3)">
+            <CardHeader>
+              <Heading size="md">My Loans Funded</Heading>
+            </CardHeader>
+            <CardBody>
+              <VStack align="stretch" spacing={3}>
+                {loans.lender.map((lending, idx) => (
+                  <Box key={lending.id || idx} p={3} bg="teal.50" borderRadius="md" borderLeft="4px solid" borderColor="teal.500">
+                    <HStack justify="space-between">
+                      <Box>
+                        <Text fontWeight="bold" fontSize="sm">Funded Amount</Text>
+                        <Text fontSize="lg" color="teal.700">${lending.amount.toLocaleString()}</Text>
+                      </Box>
+                      <Badge colorScheme="teal" fontSize="md" px={3} py={1}>
+                        Active
+                      </Badge>
+                    </HStack>
+                    {lending.fundedAt && (
+                      <Text fontSize="xs" color="gray.600" mt={2}>
+                        Funded: {new Date(lending.fundedAt).toLocaleDateString()}
+                      </Text>
+                    )}
+                  </Box>
+                ))}
+              </VStack>
+            </CardBody>
+          </Card>
+        </SimpleGrid>
+      )}
 
       <SimpleGrid columns={[1, 2]} gap={6} mb={8}>
         <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="xl" border="1px solid rgba(255,255,255,0.3)">
