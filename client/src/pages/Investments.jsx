@@ -33,17 +33,29 @@ const MOCK_OPTIONS = {
   ]
 };
 
-const MOCK_INVESTMENTS = [
-  { id: '1', type: 'stock', symbol: 'AAPL', shares: 5, avgPrice: 150, currentPrice: 175, ts: Date.now() - 86400000 },
-  { id: '2', type: 'stock', symbol: 'MSFT', shares: 3, avgPrice: 300, currentPrice: 380, ts: Date.now() - 86400000 },
-  { id: '3', type: 'bond', symbol: 'US10Y', amount: 5000, yield: 0.045, ts: Date.now() - 172800000 },
-  { id: '4', type: 'crypto', symbol: 'BTC', amount: 0.05, avgPrice: 45000, currentPrice: 45000, ts: Date.now() - 259200000 }
-];
+const getStoredInvestments = () => {
+  try {
+    const stored = localStorage.getItem('off_investments');
+    if (stored) return JSON.parse(stored);
+  } catch (e) {}
+  return [
+    { id: '1', type: 'stock', symbol: 'AAPL', shares: 5, avgPrice: 150, currentPrice: 175, ts: Date.now() - 86400000 },
+    { id: '2', type: 'stock', symbol: 'MSFT', shares: 3, avgPrice: 300, currentPrice: 380, ts: Date.now() - 86400000 },
+    { id: '3', type: 'bond', symbol: 'US10Y', amount: 5000, yield: 0.045, ts: Date.now() - 172800000 },
+    { id: '4', type: 'crypto', symbol: 'BTC', amount: 0.05, avgPrice: 45000, currentPrice: 45000, ts: Date.now() - 259200000 }
+  ];
+};
+
+const saveInvestments = (investments) => {
+  localStorage.setItem('off_investments', JSON.stringify(investments));
+  // Dispatch custom event to notify Dashboard
+  window.dispatchEvent(new Event('investmentUpdated'));
+};
 
 export default function Investments() {
   const toast = useToast();
   const [options] = useState(MOCK_OPTIONS);
-  const [investments, setInvestments] = useState(MOCK_INVESTMENTS);
+  const [investments, setInvestments] = useState(getStoredInvestments());
   const [selectedType, setSelectedType] = useState('stock');
   const [selectedSymbol, setSelectedSymbol] = useState('');
   const [amount, setAmount] = useState('');
@@ -72,6 +84,7 @@ export default function Investments() {
       ts: Date.now()
     };
 
+    let updatedInvestments;
     if (selectedType === 'stock') {
       // For stocks: amount is in dollars, calculate number of shares
       const dollarAmount = Number(amount);
@@ -79,7 +92,9 @@ export default function Investments() {
       newInvestment.shares = shares;
       newInvestment.avgPrice = option.price;
       newInvestment.currentPrice = option.price;
-      setInvestments([...investments, newInvestment]);
+      updatedInvestments = [...investments, newInvestment];
+      setInvestments(updatedInvestments);
+      saveInvestments(updatedInvestments);
       toast({ 
         title: 'Purchase successful!', 
         status: 'success', 
@@ -88,7 +103,9 @@ export default function Investments() {
     } else if (selectedType === 'bond') {
       newInvestment.amount = Number(amount);
       newInvestment.yield = option.yield;
-      setInvestments([...investments, newInvestment]);
+      updatedInvestments = [...investments, newInvestment];
+      setInvestments(updatedInvestments);
+      saveInvestments(updatedInvestments);
       toast({ title: 'Purchase successful!', status: 'success', description: `Bought $${amount} in bonds` });
     } else {
       // For crypto: amount is in dollars, calculate crypto amount
@@ -97,7 +114,9 @@ export default function Investments() {
       newInvestment.amount = cryptoAmount;
       newInvestment.avgPrice = option.price;
       newInvestment.currentPrice = option.price;
-      setInvestments([...investments, newInvestment]);
+      updatedInvestments = [...investments, newInvestment];
+      setInvestments(updatedInvestments);
+      saveInvestments(updatedInvestments);
       toast({ 
         title: 'Purchase successful!', 
         status: 'success', 
@@ -121,32 +140,35 @@ export default function Investments() {
       return;
     }
 
+    let updatedInvestments;
     if (investment.type === 'stock') {
       if (Number(sellAmount) > investment.shares) {
-        toast({ title: 'Not enough shares', status: 'error' });
+        toast({ title: 'Not enough funds', status: 'error', description: `You only have ${investment.shares.toFixed(4)} shares` });
         return;
       }
       if (Number(sellAmount) === investment.shares) {
-        setInvestments(investments.filter(inv => inv.id !== sellId));
+        updatedInvestments = investments.filter(inv => inv.id !== sellId);
       } else {
-        setInvestments(investments.map(inv => 
+        updatedInvestments = investments.map(inv => 
           inv.id === sellId ? { ...inv, shares: inv.shares - Number(sellAmount) } : inv
-        ));
+        );
       }
     } else {
       if (Number(sellAmount) > investment.amount) {
-        toast({ title: 'Not enough amount', status: 'error' });
+        toast({ title: 'Not enough funds', status: 'error', description: `You only have ${investment.amount.toFixed(6)} ${investment.symbol}` });
         return;
       }
       if (Number(sellAmount) === investment.amount) {
-        setInvestments(investments.filter(inv => inv.id !== sellId));
+        updatedInvestments = investments.filter(inv => inv.id !== sellId);
       } else {
-        setInvestments(investments.map(inv => 
+        updatedInvestments = investments.map(inv => 
           inv.id === sellId ? { ...inv, amount: inv.amount - Number(sellAmount) } : inv
-        ));
+        );
       }
     }
 
+    setInvestments(updatedInvestments);
+    saveInvestments(updatedInvestments);
     toast({ title: 'Sale successful!', status: 'success' });
     onClose();
     setSellAmount('');

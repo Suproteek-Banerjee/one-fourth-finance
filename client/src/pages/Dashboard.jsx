@@ -1,20 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Heading, SimpleGrid, Stat, StatHelpText, StatLabel, StatNumber, Card, CardBody, CardHeader, Text, Badge, VStack, HStack, Icon } from '@chakra-ui/react';
 import { AreaChart, Area, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { WarningIcon, CheckCircleIcon, ArrowUpIcon } from '@chakra-ui/icons';
+import { useLocation } from 'react-router-dom';
 
 // Mock data - no API calls
 const MOCK_DATA = {
   portfolio: {
-    value: 25000,
+    value: 0, // This will be calculated from investments
     allocation: { stocks: 0.55, bonds: 0.25, realEstate: 0.15, crypto: 0.05 }
   },
-  investments: [
-    { id: '1', type: 'stock', symbol: 'AAPL', shares: 5, avgPrice: 150, currentPrice: 175 },
-    { id: '2', type: 'stock', symbol: 'MSFT', shares: 3, avgPrice: 300, currentPrice: 380 },
-    { id: '3', type: 'bond', symbol: 'US10Y', amount: 5000, yield: 0.045 },
-    { id: '4', type: 'crypto', symbol: 'BTC', amount: 0.05, avgPrice: 45000, currentPrice: 45000 }
-  ],
   loans: [
     { id: '1', amount: 1500, rate: 0.18, termMonths: 12, status: 'active', funded: 900 }
   ],
@@ -31,8 +26,74 @@ const MOCK_DATA = {
   ]
 };
 
+// Get investments from localStorage (shared with Investments page)
+const getStoredInvestments = () => {
+  try {
+    const stored = localStorage.getItem('off_investments');
+    if (stored) return JSON.parse(stored);
+  } catch (e) {}
+  // Default investments if none stored
+  return [
+    { id: '1', type: 'stock', symbol: 'AAPL', shares: 5, avgPrice: 150, currentPrice: 175 },
+    { id: '2', type: 'stock', symbol: 'MSFT', shares: 3, avgPrice: 300, currentPrice: 380 },
+    { id: '3', type: 'bond', symbol: 'US10Y', amount: 5000, yield: 0.045 },
+    { id: '4', type: 'crypto', symbol: 'BTC', amount: 0.05, avgPrice: 45000, currentPrice: 45000 }
+  ];
+};
+
 export default function Dashboard() {
-  const investments = MOCK_DATA.investments;
+  const location = useLocation();
+  const [refreshKey, setRefreshKey] = useState(0);
+  
+  // Get current stock/crypto prices from mock options
+  const stockPrices = { AAPL: 175, MSFT: 380, GOOGL: 140, AMZN: 145, TSLA: 250, NVDA: 480, META: 320, NFLX: 450, JPM: 150, BAC: 35 };
+  const cryptoPrices = { BTC: 45000, ETH: 2500, SOL: 100, ADA: 0.55, MATIC: 0.85, DOT: 7.2 };
+  
+  // Refresh when navigating to dashboard
+  useEffect(() => {
+    setRefreshKey(prev => prev + 1);
+  }, [location.pathname]);
+  
+  // Get investments from storage and make it reactive
+  const [investments, setInvestments] = useState(() => {
+    const stored = getStoredInvestments();
+    return stored.map(inv => {
+      if (inv.type === 'stock') {
+        return { ...inv, currentPrice: stockPrices[inv.symbol] || inv.currentPrice || inv.avgPrice };
+      } else if (inv.type === 'crypto') {
+        return { ...inv, currentPrice: cryptoPrices[inv.symbol] || inv.currentPrice || inv.avgPrice };
+      }
+      return inv;
+    });
+  });
+  
+  // Update investments when storage changes or when navigating to dashboard
+  useEffect(() => {
+    const stored = getStoredInvestments();
+    const updated = stored.map(inv => {
+      if (inv.type === 'stock') {
+        return { ...inv, currentPrice: stockPrices[inv.symbol] || inv.currentPrice || inv.avgPrice };
+      } else if (inv.type === 'crypto') {
+        return { ...inv, currentPrice: cryptoPrices[inv.symbol] || inv.currentPrice || inv.avgPrice };
+      }
+      return inv;
+    });
+    setInvestments(updated);
+  }, [location.pathname, refreshKey]);
+  
+  // Listen for storage changes (when investments are updated)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setRefreshKey(prev => prev + 1);
+    };
+    window.addEventListener('storage', handleStorageChange);
+    // Also listen for custom event (for same-window updates)
+    window.addEventListener('investmentUpdated', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('investmentUpdated', handleStorageChange);
+    };
+  }, []);
   const portfolioValue = MOCK_DATA.portfolio.value;
   const loansCount = MOCK_DATA.loans.length;
   const policiesCount = MOCK_DATA.policies.length;
