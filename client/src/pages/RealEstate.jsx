@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Button, Heading, Input, Text, Card, CardBody, CardHeader, SimpleGrid, VStack, HStack, Badge } from '@chakra-ui/react';
+import { Box, Button, Heading, Input, Text, Card, CardBody, CardHeader, SimpleGrid, VStack, HStack, Badge, useToast } from '@chakra-ui/react';
 import { useAuth } from '../context/AuthContext.jsx';
 
 export default function RealEstate() {
   const { API_URL, token, loading: authLoading } = useAuth();
+  const toast = useToast();
   const [properties, setProperties] = useState([]);
   const [selected, setSelected] = useState('');
   const [tokens, setTokens] = useState(100);
@@ -12,11 +13,17 @@ export default function RealEstate() {
   const [initialLoad, setInitialLoad] = useState(true);
 
   async function load() {
-    if (!token) return;
+    if (!token) {
+      setInitialLoad(false);
+      return;
+    }
     try {
       const res = await fetch(`${API_URL}/real-estate/properties`, { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) {
-        setProperties(await res.json());
+        const data = await res.json();
+        setProperties(data || []);
+      } else {
+        console.error('Failed to load properties:', res.status);
       }
       const pf = await fetch(`${API_URL}/real-estate/portfolio`, { headers: { Authorization: `Bearer ${token}` } });
       if (pf.ok) {
@@ -31,7 +38,14 @@ export default function RealEstate() {
   }
 
   async function purchase() {
-    if (!selected || !tokens) return;
+    if (!token) {
+      toast({ title: 'Please wait for authentication', status: 'warning' });
+      return;
+    }
+    if (!selected || !tokens || tokens <= 0) {
+      toast({ title: 'Please select a property and enter token amount', status: 'warning' });
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch(`${API_URL}/real-estate/purchase`, { 
@@ -40,10 +54,17 @@ export default function RealEstate() {
         body: JSON.stringify({ propertyId: selected, tokens: Number(tokens) }) 
       });
       if (res.ok) {
+        const data = await res.json();
         await load();
+        toast({ title: 'Purchase successful!', status: 'success', description: `Purchased ${tokens} tokens` });
+        setTokens(100);
+        setSelected('');
+      } else {
+        const errorData = await res.json().catch(() => ({ error: 'Purchase failed' }));
+        toast({ title: 'Purchase failed', status: 'error', description: errorData.error || 'Please try again' });
       }
     } catch (err) {
-      console.error('Purchase failed:', err);
+      toast({ title: 'Network error', status: 'error', description: 'Could not connect to server' });
     } finally {
       setLoading(false);
     }
@@ -52,18 +73,29 @@ export default function RealEstate() {
   useEffect(() => {
     if (!authLoading && token) {
       load();
+    } else if (!authLoading && !token) {
+      setInitialLoad(false);
     }
   }, [API_URL, token, authLoading]);
 
   const selectedProperty = properties.find(p => p.id === selected);
 
   if (authLoading || initialLoad) {
-    return <Box p={8}><Text>Loading...</Text></Box>;
+    return (
+      <Box p={6}>
+        <Heading mb={6} bgGradient="linear(to-r, blue.600, purple.600)" bgClip="text">Tokenized Real Estate Investment</Heading>
+        <Box p={8}><Text>Loading properties...</Text></Box>
+      </Box>
+    );
   }
 
   return (
     <Box p={6}>
       <Heading mb={6} bgGradient="linear(to-r, blue.600, purple.600)" bgClip="text">Tokenized Real Estate Investment</Heading>
+      
+      {properties.length === 0 && !initialLoad && (
+        <Card mb={8}><CardBody><Text color="gray.500">No properties available</Text></CardBody></Card>
+      )}
       
       <SimpleGrid columns={[1, 2, 3]} gap={6} mb={8}>
         {properties.map((p) => (

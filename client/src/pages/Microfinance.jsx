@@ -15,19 +15,56 @@ export default function Microfinance() {
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   async function apply() {
+    if (!token) {
+      toast({ title: 'Please wait for authentication', status: 'warning' });
+      return;
+    }
+    if (!amount || !income || !creditScore) {
+      toast({ title: 'Please fill in all fields', status: 'warning' });
+      return;
+    }
     setLoading(true);
-    const res = await fetch(`${API_URL}/microfinance/apply`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ amount: Number(amount), income: Number(income), creditScore: Number(creditScore) }) });
-    const data = await res.json();
-    setResult(data);
-    toast({ title: data.approved ? 'Loan Approved!' : 'Loan Rejected', status: data.approved ? 'success' : 'error' });
-    await loadMy();
-    setLoading(false);
+    try {
+      const res = await fetch(`${API_URL}/microfinance/apply`, { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, 
+        body: JSON.stringify({ amount: Number(amount), income: Number(income), creditScore: Number(creditScore) }) 
+      });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Application failed' }));
+        throw new Error(errorData.error || 'Application failed');
+      }
+      const data = await res.json();
+      setResult(data);
+      toast({ title: data.approved ? 'Loan Approved!' : 'Loan Rejected', status: data.approved ? 'success' : 'error', description: `Probability: ${Math.round(data.approvalProbability * 100)}%` });
+      await loadMy();
+    } catch (err) {
+      toast({ title: 'Application failed', status: 'error', description: err.message || 'Please try again' });
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function fund(loanId) {
-    await fetch(`${API_URL}/microfinance/fund`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ loanId, amount: 200 }) });
-    toast({ title: 'Funded $200 to loan', status: 'success' });
-    await loadMy();
+    if (!token) {
+      toast({ title: 'Please wait for authentication', status: 'warning' });
+      return;
+    }
+    try {
+      const res = await fetch(`${API_URL}/microfinance/fund`, { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, 
+        body: JSON.stringify({ loanId, amount: 200 }) 
+      });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Funding failed' }));
+        throw new Error(errorData.error || 'Funding failed');
+      }
+      toast({ title: 'Successfully funded $200!', status: 'success' });
+      await loadMy();
+    } catch (err) {
+      toast({ title: 'Funding failed', status: 'error', description: err.message || 'Please try again' });
+    }
   }
 
   async function loadMy() {

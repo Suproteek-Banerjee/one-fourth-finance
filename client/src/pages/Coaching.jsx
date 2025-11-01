@@ -64,15 +64,34 @@ export default function Coaching() {
   }
 
   async function simulate() {
-    if (!allocation || !token) return;
+    if (!token) {
+      toast({ title: 'Please wait for authentication', status: 'warning' });
+      return;
+    }
+    if (!allocation) {
+      toast({ title: 'Please get an AI recommendation first', status: 'warning' });
+      return;
+    }
+    setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/coaching/simulate`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ startValue: 10000, months: 24, allocation }) });
+      const res = await fetch(`${API_URL}/coaching/simulate`, { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, 
+        body: JSON.stringify({ startValue: 10000, months: 24, allocation }) 
+      });
       if (res.ok) {
         const data = await res.json();
         setSim(data);
+        toast({ title: 'Simulation complete!', status: 'success' });
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        toast({ title: 'Simulation failed', status: 'error', description: errorData.error || 'Please try again' });
       }
     } catch (err) {
       console.error('Simulation failed:', err);
+      toast({ title: 'Network error', status: 'error', description: 'Could not connect to server' });
+    } finally {
+      setLoading(false);
     }
   }
 

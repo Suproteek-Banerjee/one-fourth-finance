@@ -67,43 +67,41 @@ export default function Dashboard() {
   
   // Calculate allocation from investments
   const allocation = investments.reduce((acc, inv) => {
-    const val = inv.type === 'stock' ? inv.shares * inv.currentPrice : inv.type === 'bond' ? inv.amount : inv.amount * inv.currentPrice;
+    if (!inv || !inv.type) return acc;
+    const val = inv.type === 'stock' ? (inv.shares || 0) * (inv.currentPrice || inv.avgPrice || 0) : 
+                inv.type === 'bond' ? (inv.amount || 0) : 
+                (inv.amount || 0) * (inv.currentPrice || inv.avgPrice || 0);
     // Map investment type to plural key
     const key = inv.type === 'stock' ? 'stocks' : inv.type === 'bond' ? 'bonds' : 'crypto';
     acc[key] = (acc[key] || 0) + val;
     return acc;
   }, { stocks: 0, bonds: 0, crypto: 0 });
   
-  const totalAllocationValue = Object.values(allocation).reduce((sum, val) => sum + val, 0);
-  const allocationPercent = totalAllocationValue > 0 
-    ? { 
-        stocks: allocation.stocks / totalAllocationValue, 
-        bonds: allocation.bonds / totalAllocationValue, 
-        crypto: allocation.crypto / totalAllocationValue 
-      }
-    : { stocks: 0, bonds: 0, crypto: 0 };
-
-  const pieData = [
-    { name: 'Stocks', value: Math.round(allocationPercent.stocks * 100), color: '#0088FE' },
-    { name: 'Bonds', value: Math.round(allocationPercent.bonds * 100), color: '#00C49F' },
-    { name: 'Crypto', value: Math.round(allocationPercent.crypto * 100), color: '#FF8042' }
-  ].filter(item => item.value > 0);
-  
-  // Add portfolio allocation if available
+  // Get portfolio allocation from backend
   const portfolioAllocation = data?.portfolio?.allocation || {};
-  if (portfolioAllocation.stocks && !allocationPercent.stocks) {
-    allocationPercent.stocks = portfolioAllocation.stocks;
-  }
-  if (portfolioAllocation.bonds && !allocationPercent.bonds) {
-    allocationPercent.bonds = portfolioAllocation.bonds;
-  }
-  if (portfolioAllocation.crypto && !allocationPercent.crypto) {
-    allocationPercent.crypto = portfolioAllocation.crypto;
-  }
-  if (portfolioAllocation.realEstate) {
-    allocationPercent.realEstate = portfolioAllocation.realEstate;
+  
+  // Combine investment-based allocation with portfolio allocation
+  const totalAllocationValue = Object.values(allocation).reduce((sum, val) => sum + val, 0);
+  
+  // Start with portfolio allocation if available, then merge with investments
+  let allocationPercent = { stocks: 0, bonds: 0, crypto: 0, realEstate: 0 };
+  
+  // If we have investment values, calculate percentages from them
+  if (totalAllocationValue > 0) {
+    allocationPercent.stocks = allocation.stocks / totalAllocationValue;
+    allocationPercent.bonds = allocation.bonds / totalAllocationValue;
+    allocationPercent.crypto = allocation.crypto / totalAllocationValue;
+  } else if (portfolioAllocation.stocks || portfolioAllocation.bonds || portfolioAllocation.crypto || portfolioAllocation.realEstate) {
+    // If no investments but have portfolio allocation, use that
+    allocationPercent = {
+      stocks: portfolioAllocation.stocks || 0,
+      bonds: portfolioAllocation.bonds || 0,
+      crypto: portfolioAllocation.crypto || 0,
+      realEstate: portfolioAllocation.realEstate || 0
+    };
   }
   
+  // Build pie chart data
   const fullPieData = [
     { name: 'Stocks', value: Math.round(allocationPercent.stocks * 100), color: '#0088FE' },
     { name: 'Bonds', value: Math.round(allocationPercent.bonds * 100), color: '#00C49F' },

@@ -41,13 +41,42 @@ export default function Insurance() {
   }
 
   async function getQuote() {
-    const res = await fetch(`${API_URL}/insurance/quote`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ productId: selected, age: 32, smoker: false }) });
-    setQuote(await res.json());
+    if (!token) return;
+    if (!selected) {
+      return;
+    }
+    try {
+      const res = await fetch(`${API_URL}/insurance/quote`, { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, 
+        body: JSON.stringify({ productId: selected, age: 32, smoker: false }) 
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setQuote(data);
+      } else {
+        console.error('Failed to get quote');
+      }
+    } catch (err) {
+      console.error('Quote failed:', err);
+    }
   }
 
   async function purchase() {
-    await fetch(`${API_URL}/insurance/purchase`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ productId: selected }) });
-    await load();
+    if (!token) return;
+    if (!selected) return;
+    try {
+      const res = await fetch(`${API_URL}/insurance/purchase`, { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, 
+        body: JSON.stringify({ productId: selected }) 
+      });
+      if (res.ok) {
+        await load();
+      }
+    } catch (err) {
+      console.error('Purchase failed:', err);
+    }
   }
 
   useEffect(() => {

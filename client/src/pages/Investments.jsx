@@ -18,24 +18,38 @@ export default function Investments() {
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   async function load() {
-    if (!token) return;
     try {
+      // Load options first (doesn't require auth)
       const opts = await fetch(`${API_URL}/investments/options`);
       if (opts.ok) {
-        setOptions(await opts.json());
+        const optionsData = await opts.json();
+        setOptions(optionsData || { stocks: [], bonds: [], crypto: [] });
+      } else {
+        console.error('Failed to load investment options');
+        // Set empty options as fallback
+        setOptions({ stocks: [], bonds: [], crypto: [] });
       }
       
-      const invs = await fetch(`${API_URL}/investments`, { headers: { Authorization: `Bearer ${token}` } });
-      if (invs.ok) {
-        const data = await invs.json();
-        setInvestments(data.investments || []);
+      // Load user investments (requires auth)
+      if (token) {
+        const invs = await fetch(`${API_URL}/investments`, { headers: { Authorization: `Bearer ${token}` } });
+        if (invs.ok) {
+          const data = await invs.json();
+          setInvestments(data.investments || []);
+        }
       }
     } catch (err) {
       console.error('Failed to load investments:', err);
+      // Set empty options as fallback
+      setOptions({ stocks: [], bonds: [], crypto: [] });
     }
   }
 
   async function buy() {
+    if (!token) {
+      toast({ title: 'Please wait for authentication', status: 'warning' });
+      return;
+    }
     if (!selectedSymbol || !amount) {
       toast({ title: 'Please select an asset and enter amount/shares', status: 'warning' });
       return;
@@ -55,21 +69,28 @@ export default function Investments() {
         body: JSON.stringify(body)
       });
       
-      if (!res.ok) throw new Error('Purchase failed');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Purchase failed' }));
+        throw new Error(errorData.error || 'Purchase failed');
+      }
       
-      toast({ title: 'Purchase successful!', status: 'success' });
+      toast({ title: 'Purchase successful!', status: 'success', description: `Bought ${selectedType === 'stock' ? amount + ' shares' : amount + ' ' + selectedSymbol}` });
       await load();
       setAmount('');
       setSelectedSymbol('');
     } catch (err) {
-      toast({ title: 'Purchase failed', status: 'error' });
+      toast({ title: 'Purchase failed', status: 'error', description: err.message || 'Please try again' });
     } finally {
       setLoading(false);
     }
   }
 
   async function sell() {
-    if (!sellAmount) {
+    if (!token) {
+      toast({ title: 'Please wait for authentication', status: 'warning' });
+      return;
+    }
+    if (!sellAmount || !sellId) {
       toast({ title: 'Please enter amount/shares to sell', status: 'warning' });
       return;
     }
@@ -82,7 +103,10 @@ export default function Investments() {
         body: JSON.stringify(selectedType === 'stock' ? { shares: Number(sellAmount) } : { amount: Number(sellAmount) })
       });
       
-      if (!res.ok) throw new Error('Sale failed');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Sale failed' }));
+        throw new Error(errorData.error || 'Sale failed');
+      }
       
       toast({ title: 'Sale successful!', status: 'success' });
       await load();
@@ -90,7 +114,7 @@ export default function Investments() {
       setSellAmount('');
       setSellId(null);
     } catch (err) {
-      toast({ title: 'Sale failed', status: 'error' });
+      toast({ title: 'Sale failed', status: 'error', description: err.message || 'Please try again' });
     } finally {
       setLoading(false);
     }
@@ -103,7 +127,8 @@ export default function Investments() {
   }
 
   useEffect(() => {
-    if (!authLoading && token) {
+    // Load options immediately (no auth needed), investments when token is available
+    if (!authLoading) {
       load();
     }
   }, [API_URL, token, authLoading]);
@@ -213,7 +238,7 @@ export default function Investments() {
                 <CardBody>
                   <VStack align="stretch" spacing={3}>
                     <Select value={selectedSymbol} onChange={e => setSelectedSymbol(e.target.value)} placeholder="Select stock">
-                      {options.stocks.map(opt => (
+                      {(options.stocks || []).map(opt => (
                         <option key={opt.symbol} value={opt.symbol}>
                           {opt.name} ({opt.symbol}) - ${opt.price} {opt.change24h >= 0 ? '+' : ''}{opt.change24h}%
                         </option>
@@ -280,7 +305,7 @@ export default function Investments() {
                 <CardBody>
                   <VStack align="stretch" spacing={3}>
                     <Select value={selectedSymbol} onChange={e => setSelectedSymbol(e.target.value)} placeholder="Select bond">
-                      {options.bonds.map(opt => (
+                      {(options.bonds || []).map(opt => (
                         <option key={opt.symbol} value={opt.symbol}>
                           {opt.name} - {(opt.yield * 100).toFixed(2)}% yield
                         </option>
@@ -337,7 +362,7 @@ export default function Investments() {
                 <CardBody>
                   <VStack align="stretch" spacing={3}>
                     <Select value={selectedSymbol} onChange={e => setSelectedSymbol(e.target.value)} placeholder="Select crypto">
-                      {options.crypto.map(opt => (
+                      {(options.crypto || []).map(opt => (
                         <option key={opt.symbol} value={opt.symbol}>
                           {opt.name} ({opt.symbol}) - ${opt.price.toLocaleString()} {opt.change24h >= 0 ? '+' : ''}{opt.change24h}%
                         </option>

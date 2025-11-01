@@ -12,23 +12,38 @@ export default function Pension() {
   const [sim, setSim] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  const [initialLoad, setInitialLoad] = useState(true);
+
   async function load() {
-    if (!token) return;
+    if (!token) {
+      setInitialLoad(false);
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch(`${API_URL}/pension/account`, { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
         setAccount(data);
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        console.error('Failed to load pension account:', res.status, errorData);
+        toast({ title: 'Failed to load account', status: 'error', description: errorData.error || 'Please try again' });
       }
     } catch (err) {
       console.error('Failed to load account:', err);
+      toast({ title: 'Network error', status: 'error', description: 'Could not connect to server' });
     } finally {
       setLoading(false);
+      setInitialLoad(false);
     }
   }
 
   async function deposit() {
+    if (!token) {
+      toast({ title: 'Please wait for authentication', status: 'warning' });
+      return;
+    }
     if (!amount || amount <= 0) {
       toast({ title: 'Please enter a valid amount', status: 'warning' });
       return;
@@ -40,34 +55,54 @@ export default function Pension() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, 
         body: JSON.stringify({ amount: Number(amount) }) 
       });
-      if (!res.ok) throw new Error('Deposit failed');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Deposit failed' }));
+        throw new Error(errorData.error || 'Deposit failed');
+      }
       const data = await res.json();
       setAccount(data);
-      toast({ title: 'Deposit successful', status: 'success', description: `Added $${amount} to your pension` });
-      setAmount('');
+      toast({ title: 'Deposit successful!', status: 'success', description: `Added $${amount} to your pension` });
+      setAmount(100);
     } catch (err) {
-      toast({ title: 'Deposit failed', status: 'error' });
+      toast({ title: 'Deposit failed', status: 'error', description: err.message || 'Please try again' });
     } finally {
       setLoading(false);
     }
   }
 
   async function simulate() {
-    if (!token) return;
+    if (!token) {
+      toast({ title: 'Please wait for authentication', status: 'warning' });
+      return;
+    }
+    setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/pension/simulate`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ months: 24 }) });
+      const res = await fetch(`${API_URL}/pension/simulate`, { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, 
+        body: JSON.stringify({ months: 24 }) 
+      });
       if (res.ok) {
         const data = await res.json();
         setSim(data);
+        toast({ title: 'Simulation complete!', status: 'success' });
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        toast({ title: 'Simulation failed', status: 'error', description: errorData.error || 'Please try again' });
       }
     } catch (err) {
       console.error('Simulation failed:', err);
+      toast({ title: 'Network error', status: 'error', description: 'Could not connect to server' });
+    } finally {
+      setLoading(false);
     }
   }
 
   useEffect(() => {
     if (!authLoading && token) {
       load();
+    } else if (!authLoading && !token) {
+      setInitialLoad(false);
     }
   }, [API_URL, token, authLoading]);
 
@@ -80,6 +115,10 @@ export default function Pension() {
         <Icon as={ViewIcon} fontSize="2xl" color="blue.500" />
         <Heading>Crypto-Pension Plans</Heading>
       </HStack>
+      
+      {initialLoad && authLoading && (
+        <Box p={8}><Text>Loading...</Text></Box>
+      )}
       
       <SimpleGrid columns={[1, 2, 4]} gap={6} mb={8}>
         {account ? (
