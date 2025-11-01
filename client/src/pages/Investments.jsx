@@ -244,11 +244,29 @@ export default function Investments() {
     return acc;
   }, {});
 
+  // Round values to avoid floating point precision errors
   const chartData = Object.entries(portfolioData).map(([key, val]) => ({
     name: key.charAt(0).toUpperCase() + key.slice(1),
-    value: val,
+    value: Math.round(val * 100) / 100, // Round to 2 decimal places
+    rawValue: val, // Keep raw value for tooltip
     color: key === 'stock' ? '#0088FE' : key === 'bond' ? '#00C49F' : '#FFBB28'
   }));
+  
+  // Custom tooltip to show dollar amounts
+  const CustomTooltip = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <Box bg="white" p={3} border="1px solid" borderColor="gray.200" borderRadius="md" boxShadow="lg">
+          <Text fontWeight="bold" mb={1}>{data.name}</Text>
+          <Text fontSize="sm" color="gray.600" fontWeight="bold">
+            Value: ${data.rawValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </Text>
+        </Box>
+      );
+    }
+    return null;
+  };
 
   return (
     <Box p={6}>
@@ -297,12 +315,20 @@ export default function Investments() {
           <CardBody>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
-                <Pie data={chartData} cx="50%" cy="50%" outerRadius={100} fill="#8884d8" dataKey="value" label>
+                <Pie 
+                  data={chartData} 
+                  cx="50%" 
+                  cy="50%" 
+                  outerRadius={100} 
+                  fill="#8884d8" 
+                  dataKey="value" 
+                  label={({ value }) => `$${Math.round(value).toLocaleString()}`}
+                >
                   {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip content={<CustomTooltip />} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
