@@ -73,11 +73,18 @@ export default function Investments() {
     };
 
     if (selectedType === 'stock') {
-      newInvestment.shares = Number(amount);
+      // For stocks: amount is in dollars, calculate number of shares
+      const dollarAmount = Number(amount);
+      const shares = dollarAmount / option.price;
+      newInvestment.shares = shares;
       newInvestment.avgPrice = option.price;
       newInvestment.currentPrice = option.price;
       setInvestments([...investments, newInvestment]);
-      toast({ title: 'Purchase successful!', status: 'success', description: `Bought ${amount} shares` });
+      toast({ 
+        title: 'Purchase successful!', 
+        status: 'success', 
+        description: `Bought ${shares.toFixed(4)} shares for $${dollarAmount.toFixed(2)}` 
+      });
     } else if (selectedType === 'bond') {
       newInvestment.amount = Number(amount);
       newInvestment.yield = option.yield;
@@ -263,7 +270,17 @@ export default function Investments() {
                         </option>
                       ))}
                     </Select>
-                    <Input type="number" placeholder="Number of shares" value={amount} onChange={e => setAmount(e.target.value)} />
+                    <Input type="number" placeholder="Amount in USD ($)" value={amount} onChange={e => setAmount(e.target.value)} />
+                    {selectedSymbol && amount && (() => {
+                      const option = options.stocks.find(o => o.symbol === selectedSymbol);
+                      if (!option) return null;
+                      const shares = Number(amount) / option.price;
+                      return (
+                        <Text fontSize="sm" color="gray.600">
+                          You will receive: {shares.toFixed(4)} shares
+                        </Text>
+                      );
+                    })()}
                     <Button onClick={buy} colorScheme="blue" leftIcon={<Icon as={ArrowUpIcon} />}>
                       Buy Stock
                     </Button>
