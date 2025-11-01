@@ -69,37 +69,48 @@ export default function Profile() {
   const [investments, setInvestments] = useState([]);
   const [pension, setPension] = useState(null);
   const [loans, setLoans] = useState({ borrower: [], lender: [] });
+  const [realEstateHoldings, setRealEstateHoldings] = useState([]);
+  const [refreshKey, setRefreshKey] = useState(0);
+  
+  // Get real estate holdings from localStorage
+  const getStoredRealEstate = () => {
+    try {
+      const stored = localStorage.getItem('off_realestate');
+      if (stored) return JSON.parse(stored);
+    } catch (e) {}
+    return [];
+  };
   
   useEffect(() => {
-    // Load investments
-    const storedInvestments = getStoredInvestments();
-    setInvestments(storedInvestments);
-    
-    // Load pension
-    const storedPension = getStoredPension();
-    setPension(storedPension);
-    
-    // Load loans
-    const storedLoans = getStoredLoans();
-    setLoans(storedLoans);
-    
-    // Listen for changes
-    const handleStorageChange = () => {
+    // Load all data
+    const loadData = () => {
       setInvestments(getStoredInvestments());
       setPension(getStoredPension());
       setLoans(getStoredLoans());
+      setRealEstateHoldings(getStoredRealEstate());
+      setRefreshKey(prev => prev + 1); // Force recalculation
+    };
+    
+    // Load initial data
+    loadData();
+    
+    // Listen for changes
+    const handleStorageChange = () => {
+      loadData();
     };
     
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('investmentUpdated', handleStorageChange);
     window.addEventListener('pensionUpdated', handleStorageChange);
     window.addEventListener('loansUpdated', handleStorageChange);
+    window.addEventListener('realEstateUpdated', handleStorageChange);
     
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('investmentUpdated', handleStorageChange);
       window.removeEventListener('pensionUpdated', handleStorageChange);
       window.removeEventListener('loansUpdated', handleStorageChange);
+      window.removeEventListener('realEstateUpdated', handleStorageChange);
     };
   }, []);
 
@@ -128,30 +139,54 @@ export default function Profile() {
     }, 500);
   }
 
+  // Real estate properties (matching RealEstate page)
+  const REAL_ESTATE_PROPERTIES = [
+    { id: '1', title: 'Nairobi Apartments', price: 250000, roi: 0.11, tokensTotal: 100000, tokensAvailable: 75000 },
+    { id: '2', title: 'Lagos Co-working', price: 450000, roi: 0.13, tokensTotal: 150000, tokensAvailable: 120000 },
+    { id: '3', title: 'Bangalore Retail', price: 600000, roi: 0.09, tokensTotal: 200000, tokensAvailable: 180000 },
+    { id: '4', title: 'Cape Town Residences', price: 350000, roi: 0.12, tokensTotal: 125000, tokensAvailable: 95000 },
+    { id: '5', title: 'Mumbai Office Complex', price: 750000, roi: 0.10, tokensTotal: 250000, tokensAvailable: 220000 },
+    { id: '6', title: 'Dubai Luxury Condos', price: 850000, roi: 0.14, tokensTotal: 280000, tokensAvailable: 250000 }
+  ];
+
   // Stock and crypto prices (matching Investments page)
   const stockPrices = { AAPL: 175, MSFT: 380, GOOGL: 140, AMZN: 145, TSLA: 250, NVDA: 480, META: 320, NFLX: 450, JPM: 150, BAC: 35 };
   const cryptoPrices = { BTC: 45000, ETH: 2500, SOL: 100, ADA: 0.55, MATIC: 0.85, DOT: 7.2 };
   
-  // Calculate investment values with current prices
-  const investmentsWithPrices = investments.map(inv => {
-    if (inv.type === 'stock') {
-      return { ...inv, currentPrice: stockPrices[inv.symbol] || inv.currentPrice || inv.avgPrice };
-    } else if (inv.type === 'crypto') {
-      return { ...inv, currentPrice: cryptoPrices[inv.symbol] || inv.currentPrice || inv.avgPrice };
-    }
-    return inv;
-  });
+  // Calculate investment values with current prices - recalculated when refreshKey changes
+  const investmentsWithPrices = useMemo(() => {
+    return investments.map(inv => {
+      if (inv.type === 'stock') {
+        return { ...inv, currentPrice: stockPrices[inv.symbol] || inv.currentPrice || inv.avgPrice };
+      } else if (inv.type === 'crypto') {
+        return { ...inv, currentPrice: cryptoPrices[inv.symbol] || inv.currentPrice || inv.avgPrice };
+      }
+      return inv;
+    });
+  }, [investments, refreshKey]);
   
-  const investmentValue = investmentsWithPrices.reduce((sum, inv) => {
-    if (inv.type === 'stock') return sum + (inv.shares * inv.currentPrice);
-    if (inv.type === 'bond') return sum + inv.amount;
-    if (inv.type === 'crypto') return sum + (inv.amount * inv.currentPrice);
-    return sum;
-  }, 0);
+  const investmentValue = useMemo(() => {
+    return investmentsWithPrices.reduce((sum, inv) => {
+      if (inv.type === 'stock') return sum + (inv.shares * inv.currentPrice);
+      if (inv.type === 'bond') return sum + inv.amount;
+      if (inv.type === 'crypto') return sum + (inv.amount * inv.currentPrice);
+      return sum;
+    }, 0);
+  }, [investmentsWithPrices]);
+  
+  // Calculate real estate value from holdings
+  const realEstateValue = useMemo(() => {
+    return realEstateHoldings.reduce((sum, holding) => {
+      const property = REAL_ESTATE_PROPERTIES.find(p => p.id === holding.propertyId);
+      if (!property) return sum;
+      const holdingValue = (holding.tokens / property.tokensTotal) * property.price;
+      return sum + holdingValue;
+    }, 0);
+  }, [realEstateHoldings, refreshKey]);
   
   const pensionBalance = pension?.balance || 0;
   const totalDebt = loans.borrower.reduce((sum, loan) => sum + (loan.amount - (loan.funded || 0)), 0);
-  const totalInvested = investmentValue + pensionBalance;
+  const totalInvested = investmentValue + pensionBalance + realEstateValue;
 
   // Generate realistic account performance data based on actual investments
   // Simulate 30 days of realistic market movements
@@ -235,8 +270,14 @@ export default function Profile() {
     return months;
   }
 
-  const performanceData = generatePerformanceData(investmentValue + pensionBalance);
-  const portfolioGrowthData = generatePortfolioGrowthData(investmentsWithPrices);
+  // Recalculate performance and growth data when investments change
+  const performanceData = useMemo(() => {
+    return generatePerformanceData(investmentValue + pensionBalance + realEstateValue);
+  }, [investmentValue, pensionBalance, realEstateValue, refreshKey]);
+  
+  const portfolioGrowthData = useMemo(() => {
+    return generatePortfolioGrowthData(investmentsWithPrices);
+  }, [investmentsWithPrices, refreshKey]);
 
   return (
     <Box p={6} bgGradient="linear(to-br, gray.50, blue.50)" minH="100vh">
