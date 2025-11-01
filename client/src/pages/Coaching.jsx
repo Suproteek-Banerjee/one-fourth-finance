@@ -65,11 +65,30 @@ export default function Coaching() {
   }
 
   const allocationData = allocation ? [
-    { name: 'Stocks', value: (allocation.stocks * 100).toFixed(0), color: '#0088FE' },
-    { name: 'Bonds', value: (allocation.bonds * 100).toFixed(0), color: '#00C49F' },
-    { name: 'Real Estate', value: (allocation.realEstate * 100).toFixed(0), color: '#FFBB28' },
-    { name: 'Crypto', value: (allocation.crypto * 100).toFixed(0), color: '#FF8042' }
-  ] : [];
+    { name: 'Stocks', value: Math.round(allocation.stocks * 100), color: '#0088FE' },
+    { name: 'Bonds', value: Math.round(allocation.bonds * 100), color: '#00C49F' },
+    { name: 'Real Estate', value: Math.round(allocation.realEstate * 100), color: '#FFBB28' },
+    { name: 'Crypto', value: Math.round(allocation.crypto * 100), color: '#FF8042' }
+  ].filter(item => item.value > 0) : [];
+  
+  // Custom label function to show percentage
+  const renderLabel = (entry) => {
+    return `${entry.value}%`;
+  };
+  
+  // Custom tooltip
+  const CustomTooltip = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <Box bg="white" p={3} border="1px solid" borderColor="gray.200" borderRadius="md" boxShadow="lg">
+          <Text fontWeight="bold" mb={1}>{data.name}</Text>
+          <Text fontSize="sm" color="gray.600" fontWeight="bold">{data.value}%</Text>
+        </Box>
+      );
+    }
+    return null;
+  };
 
   const simData = sim ? sim.history.map((h, idx) => ({ month: h.month, value: h.value })) : [];
   const avgRisk = Math.round(answers.reduce((a, b) => a + b, 0) * 10);
@@ -130,17 +149,27 @@ export default function Coaching() {
                   </Badge>
                 </Box>
                 
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie data={allocationData} cx="50%" cy="50%" outerRadius={100} fill="#8884d8" dataKey="value" label>
-                      {allocationData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
+                {allocationData.length > 0 && (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie 
+                        data={allocationData} 
+                        cx="50%" 
+                        cy="50%" 
+                        outerRadius={100} 
+                        fill="#8884d8" 
+                        dataKey="value" 
+                        label={renderLabel}
+                      >
+                        {allocationData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip content={<CustomTooltip />} />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
                 
                 <VStack align="stretch" spacing={2}>
                   <HStack justify="space-between">
@@ -184,21 +213,30 @@ export default function Coaching() {
                 <Badge mt={2} colorScheme="green">+${(sim.finalValue - 10000).toLocaleString()} growth</Badge>
               </Box>
               
-              <ResponsiveContainer width="100%" height={350}>
-                <AreaChart data={simData}>
-                  <defs>
-                    <linearGradient id="colorSim" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="#8884d8" stopOpacity={0.2}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Area type="monotone" dataKey="value" stroke="#8884d8" fillOpacity={1} fill="url(#colorSim)" />
-                </AreaChart>
-              </ResponsiveContainer>
+              {simData.length > 0 && (
+                <ResponsiveContainer width="100%" height={350}>
+                  <AreaChart data={simData}>
+                    <defs>
+                      <linearGradient id="colorSim" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#8884d8" stopOpacity={0.2}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip 
+                      formatter={(value) => [`$${value.toLocaleString()}`, 'Value']}
+                      contentStyle={{ 
+                        backgroundColor: 'white', 
+                        border: '1px solid #E2E8F0', 
+                        borderRadius: '8px'
+                      }}
+                    />
+                    <Area type="monotone" dataKey="value" stroke="#8884d8" fillOpacity={1} fill="url(#colorSim)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
             </VStack>
           </CardBody>
         </Card>
