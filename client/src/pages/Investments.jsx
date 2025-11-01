@@ -98,7 +98,7 @@ export default function Investments() {
       toast({ 
         title: 'Purchase successful!', 
         status: 'success', 
-        description: `Bought ${shares.toFixed(4)} shares for $${dollarAmount.toFixed(2)}` 
+        description: `Bought ${shares.toFixed(3)} shares for $${dollarAmount.toFixed(2)}` 
       });
     } else if (selectedType === 'bond') {
       newInvestment.amount = Number(amount);
@@ -162,7 +162,7 @@ export default function Investments() {
       const maxValue = investment.shares * currentPrice;
       
       if (dollarAmount > maxValue) {
-        toast({ title: 'Not enough funds', status: 'error', description: `You only have $${maxValue.toFixed(2)} worth (${investment.shares.toFixed(4)} shares)` });
+        toast({ title: 'Not enough funds', status: 'error', description: `You only have $${maxValue.toFixed(2)} worth (${investment.shares.toFixed(3)} shares)` });
         return;
       }
       
@@ -174,7 +174,7 @@ export default function Investments() {
           inv.id === sellId ? { ...inv, shares: inv.shares - sharesToSell } : inv
         );
       }
-      toast({ title: 'Sale successful!', status: 'success', description: `Sold ${sharesToSell.toFixed(4)} shares for $${dollarAmount.toFixed(2)}` });
+      toast({ title: 'Sale successful!', status: 'success', description: `Sold ${sharesToSell.toFixed(3)} shares for $${dollarAmount.toFixed(2)}` });
     } else if (investment.type === 'bond') {
       // For bonds, sellAmount is already in dollars
       if (dollarAmount > investment.amount) {
@@ -366,7 +366,7 @@ export default function Investments() {
                       const shares = Number(amount) / option.price;
                       return (
                         <Text fontSize="sm" color="gray.600">
-                          You will receive: {shares.toFixed(4)} shares
+                          You will receive: {shares.toFixed(3)} shares
                         </Text>
                       );
                     })()}
@@ -403,7 +403,7 @@ export default function Investments() {
                           return (
                             <Tr key={inv.id}>
                               <Td fontWeight="bold">{inv.symbol}</Td>
-                              <Td>{inv.shares}</Td>
+                              <Td>{inv.shares.toFixed(3)}</Td>
                               <Td>${inv.avgPrice.toFixed(2)}</Td>
                               <Td>${currentPrice.toFixed(2)}</Td>
                               <Td color={gain >= 0 ? 'green.500' : 'red.500'}>${value.toFixed(2)}</Td>
@@ -593,7 +593,7 @@ export default function Investments() {
                     <Box>
                       <Text mb={2} fontWeight="medium">Available to sell:</Text>
                       <Text fontSize="sm" color="gray.600">
-                        {investment.type === 'stock' && `${investment.shares.toFixed(4)} shares ($${maxValue.toFixed(2)})`}
+                        {investment.type === 'stock' && `${investment.shares.toFixed(3)} shares ($${maxValue.toFixed(2)})`}
                         {investment.type === 'crypto' && `${investment.amount.toFixed(6)} ${investment.symbol} ($${maxValue.toFixed(2)})`}
                         {investment.type === 'bond' && `$${investment.amount.toFixed(2)}`}
                       </Text>
@@ -607,7 +607,7 @@ export default function Investments() {
                     {sellAmount && amountToSell > 0 && (
                       <Text fontSize="sm" color="gray.600">
                         You will sell: {
-                          investment.type === 'stock' ? `${amountToSell.toFixed(4)} shares` :
+                          investment.type === 'stock' ? `${amountToSell.toFixed(3)} shares` :
                           investment.type === 'crypto' ? `${amountToSell.toFixed(6)} ${investment.symbol}` :
                           `$${amountToSell.toFixed(2)}`
                         }
