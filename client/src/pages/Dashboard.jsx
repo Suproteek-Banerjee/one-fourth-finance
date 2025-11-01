@@ -128,6 +128,7 @@ export default function Dashboard() {
   const totalAllocationValue = Object.values(allocation).reduce((sum, val) => sum + val, 0);
   
   let allocationPercent = { stocks: 0, bonds: 0, crypto: 0, realEstate: 0 };
+  let realEstateAmount = 0;
   
   if (totalAllocationValue > 0) {
     allocationPercent.stocks = allocation.stocks / totalAllocationValue;
@@ -140,15 +141,64 @@ export default function Dashboard() {
       crypto: portfolioAllocation.crypto || 0,
       realEstate: portfolioAllocation.realEstate || 0
     };
+    // Calculate real estate amount from percentage if we have total value
+    if (totalPortfolioValue > 0 && portfolioAllocation.realEstate) {
+      realEstateAmount = totalPortfolioValue * portfolioAllocation.realEstate;
+    }
   }
   
-  // Build pie chart data
+  // If we have real estate percentage but no amount calculated, calculate from total
+  if (allocationPercent.realEstate > 0 && realEstateAmount === 0 && totalAllocationValue > 0) {
+    realEstateAmount = totalAllocationValue * allocationPercent.realEstate;
+  }
+  
+  // Build pie chart data with dollar amounts
   const fullPieData = [
-    { name: 'Stocks', value: Math.round(allocationPercent.stocks * 100), color: '#0088FE' },
-    { name: 'Bonds', value: Math.round(allocationPercent.bonds * 100), color: '#00C49F' },
-    { name: 'Crypto', value: Math.round(allocationPercent.crypto * 100), color: '#FF8042' },
-    { name: 'Real Estate', value: Math.round((allocationPercent.realEstate || 0) * 100), color: '#FFBB28' }
+    { 
+      name: 'Stocks', 
+      value: Math.round(allocationPercent.stocks * 100), 
+      amount: allocation.stocks || 0,
+      color: '#0088FE' 
+    },
+    { 
+      name: 'Bonds', 
+      value: Math.round(allocationPercent.bonds * 100), 
+      amount: allocation.bonds || 0,
+      color: '#00C49F' 
+    },
+    { 
+      name: 'Crypto', 
+      value: Math.round(allocationPercent.crypto * 100), 
+      amount: allocation.crypto || 0,
+      color: '#FF8042' 
+    },
+    { 
+      name: 'Real Estate', 
+      value: Math.round((allocationPercent.realEstate || 0) * 100), 
+      amount: realEstateAmount,
+      color: '#FFBB28' 
+    }
   ].filter(item => item.value > 0);
+  
+  // Custom label function to show percentage
+  const renderLabel = (entry) => {
+    return `${entry.value}%`;
+  };
+  
+  // Custom tooltip to show dollar amounts
+  const CustomTooltip = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <Box bg="white" p={3} border="1px solid" borderColor="gray.200" borderRadius="md" boxShadow="lg">
+          <Text fontWeight="bold" mb={1}>{data.name}</Text>
+          <Text fontSize="sm" color="gray.600">Percentage: {data.value}%</Text>
+          <Text fontSize="sm" color="gray.600" fontWeight="bold">Amount: ${data.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+        </Box>
+      );
+    }
+    return null;
+  };
 
   const monthlyData = [
     { month: 'Jan', value: 22000 },
@@ -226,12 +276,20 @@ export default function Dashboard() {
             {fullPieData.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
-                  <Pie data={fullPieData} cx="50%" cy="50%" outerRadius={100} fill="#8884d8" dataKey="value" label>
+                  <Pie 
+                    data={fullPieData} 
+                    cx="50%" 
+                    cy="50%" 
+                    outerRadius={100} 
+                    fill="#8884d8" 
+                    dataKey="value" 
+                    label={renderLabel}
+                  >
                     {fullPieData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip content={<CustomTooltip />} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
