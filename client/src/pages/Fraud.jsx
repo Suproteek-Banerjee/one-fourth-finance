@@ -1,50 +1,69 @@
-import React, { useEffect, useState } from 'react';
-import { Box, Button, Heading, Text, Card, CardBody, CardHeader, SimpleGrid, Badge, HStack, Icon, VStack } from '@chakra-ui/react';
-import { useAuth } from '../context/AuthContext.jsx';
+import React, { useState } from 'react';
+import { Box, Button, Heading, Text, Card, CardBody, CardHeader, SimpleGrid, Badge, HStack, Icon, VStack, useToast } from '@chakra-ui/react';
 import { WarningIcon } from '@chakra-ui/icons';
 
+// Mock data - no API calls
+const MOCK_ALERTS = [
+  {
+    id: '1',
+    message: 'Unusual transaction pattern detected',
+    txId: 'TX-12345',
+    level: 'medium',
+    ts: Date.now() - 3600000
+  }
+];
+
 export default function Fraud() {
-  const { API_URL, token, loading: authLoading } = useAuth();
-  const [alerts, setAlerts] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const toast = useToast();
+  const [alerts, setAlerts] = useState(MOCK_ALERTS);
 
-  async function simulate() {
-    if (!token) return;
-    setLoading(true);
-    try {
-      const sample = [
-        { id: 'tx1', amount: 15000, country: 'home', retries: 0 },
-        { id: 'tx2', amount: 2500, country: 'abroad', retries: 1 },
-        { id: 'tx3', amount: 100, country: 'home', retries: 5 }
-      ];
-      const res = await fetch(`${API_URL}/fraud/simulate`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ transactions: sample }) });
-      if (res.ok) {
-        await load();
+  function simulate() {
+    // Generate random suspicious transactions
+    const suspiciousTransactions = [
+      { amount: 15000, country: 'abroad', retries: 0, type: 'large_amount' },
+      { amount: 2500, country: 'abroad', retries: 3, type: 'multiple_retries' },
+      { amount: 50000, country: 'home', retries: 0, type: 'very_large_amount' },
+      { amount: 100, country: 'home', retries: 8, type: 'excessive_retries' },
+      { amount: 8500, country: 'abroad', retries: 2, type: 'foreign_large' }
+    ];
+
+    const newAlerts = suspiciousTransactions.map((tx, idx) => {
+      let level = 'low';
+      let message = '';
+
+      if (tx.type === 'very_large_amount') {
+        level = 'high';
+        message = `Very large transaction detected: $${tx.amount.toLocaleString()}`;
+      } else if (tx.type === 'excessive_retries') {
+        level = 'high';
+        message = `Excessive retry attempts detected: ${tx.retries} retries for $${tx.amount}`;
+      } else if (tx.type === 'large_amount' && tx.country === 'abroad') {
+        level = 'high';
+        message = `Large foreign transaction: $${tx.amount.toLocaleString()} from ${tx.country}`;
+      } else if (tx.type === 'multiple_retries') {
+        level = 'medium';
+        message = `Multiple retry attempts: ${tx.retries} retries for transaction`;
+      } else {
+        level = 'medium';
+        message = `Suspicious transaction pattern: $${tx.amount.toLocaleString()}`;
       }
-    } catch (err) {
-      console.error('Simulation failed:', err);
-    } finally {
-      setLoading(false);
-    }
-  }
 
-  async function load() {
-    if (!token) return;
-    try {
-      const res = await fetch(`${API_URL}/fraud/alerts`, { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) {
-        setAlerts(await res.json());
-      }
-    } catch (err) {
-      console.error('Failed to load alerts:', err);
-    }
-  }
+      return {
+        id: Date.now().toString() + idx,
+        message: message,
+        txId: `TX-${Math.floor(Math.random() * 100000)}`,
+        level: level,
+        ts: Date.now() - (idx * 60000) // Stagger timestamps
+      };
+    });
 
-  useEffect(() => {
-    if (!authLoading && token) {
-      load();
-    }
-  }, [API_URL, token, authLoading]);
+    setAlerts([...newAlerts, ...alerts]);
+    toast({ 
+      title: 'Simulation complete!', 
+      status: 'success', 
+      description: `Generated ${newAlerts.length} fraud alerts` 
+    });
+  }
 
   const getColorScheme = (level) => {
     if (level === 'high') return 'red';
@@ -58,8 +77,10 @@ export default function Fraud() {
       
       <Card mb={6} bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="xl" border="1px solid rgba(255,255,255,0.5)">
         <CardBody>
-          <Text mb={4}>Test the fraud detection system with simulated transactions</Text>
-          <Button onClick={simulate} isLoading={loading} colorScheme="blue">Simulate Suspicious Transactions</Button>
+          <VStack align="stretch" spacing={4}>
+            <Text>Test the fraud detection system with simulated transactions. This will generate various suspicious transaction patterns.</Text>
+            <Button onClick={simulate} colorScheme="blue" size="lg">Simulate Suspicious Transactions</Button>
+          </VStack>
         </CardBody>
       </Card>
 
