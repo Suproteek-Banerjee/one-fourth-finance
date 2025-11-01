@@ -12,9 +12,13 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Wait for auth to finish loading before making API call
+    if (authLoading) {
+      setLoading(true);
+      return;
+    }
+    
     async function load() {
-      // Wait for auth to finish loading before making API call
-      if (authLoading) return;
       if (!token) {
         setLoading(false);
         setData({ portfolio: {}, investments: [], loans: [], policies: [], pension: null, alerts: [] });
@@ -42,7 +46,7 @@ export default function Dashboard() {
       }
     }
     
-    // Always load when component mounts, location changes, or dependencies change
+    // Load data once auth is ready
     load();
   }, [API_URL, token, authLoading, location.pathname]);
 
@@ -117,8 +121,12 @@ export default function Dashboard() {
     { month: 'May', value: 25000 }
   ];
 
-  if (loading) {
-    return <Box p={8}><Text>Loading...</Text></Box>;
+  if (loading || authLoading) {
+    return (
+      <Box p={8} display="flex" alignItems="center" justifyContent="center" minH="50vh">
+        <Text fontSize="lg" color="gray.600">Loading dashboard...</Text>
+      </Box>
+    );
   }
 
   return (
