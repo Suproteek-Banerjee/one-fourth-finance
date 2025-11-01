@@ -57,7 +57,9 @@ export default function Investments() {
       return;
     }
     
-    const option = options[selectedType + 's'].find(opt => opt.symbol === selectedSymbol);
+    // Handle crypto separately since it's singular, not plural
+    const optionKey = selectedType === 'crypto' ? 'crypto' : selectedType + 's';
+    const option = options[optionKey]?.find(opt => opt.symbol === selectedSymbol);
     if (!option) {
       toast({ title: 'Invalid selection', status: 'error' });
       return;
