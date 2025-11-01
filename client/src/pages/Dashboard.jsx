@@ -1,59 +1,43 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Box, Heading, SimpleGrid, Stat, StatHelpText, StatLabel, StatNumber, Card, CardBody, CardHeader, Text, Badge, VStack, HStack, Icon } from '@chakra-ui/react';
 import { AreaChart, Area, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { useAuth } from '../context/AuthContext.jsx';
-import { useLocation } from 'react-router-dom';
-import { WarningIcon, CheckCircleIcon, ArrowUpIcon, ViewIcon, InfoIcon } from '@chakra-ui/icons';
+import { WarningIcon, CheckCircleIcon, ArrowUpIcon } from '@chakra-ui/icons';
+
+// Mock data - no API calls
+const MOCK_DATA = {
+  portfolio: {
+    value: 25000,
+    allocation: { stocks: 0.55, bonds: 0.25, realEstate: 0.15, crypto: 0.05 }
+  },
+  investments: [
+    { id: '1', type: 'stock', symbol: 'AAPL', shares: 5, avgPrice: 150, currentPrice: 175 },
+    { id: '2', type: 'stock', symbol: 'MSFT', shares: 3, avgPrice: 300, currentPrice: 380 },
+    { id: '3', type: 'bond', symbol: 'US10Y', amount: 5000, yield: 0.045 },
+    { id: '4', type: 'crypto', symbol: 'BTC', amount: 0.05, avgPrice: 45000, currentPrice: 45000 }
+  ],
+  loans: [
+    { id: '1', amount: 1500, rate: 0.18, termMonths: 12, status: 'active', funded: 900 }
+  ],
+  policies: [
+    { id: '1', name: 'OFF Basic Health', premium: 25, coverage: 10000 }
+  ],
+  pension: {
+    balance: 5000,
+    monthlyContribution: 200,
+    apy: 0.08
+  },
+  alerts: [
+    { id: '1', type: 'info', message: 'Portfolio performance is up 5% this month', ts: Date.now() - 86400000 }
+  ]
+};
 
 export default function Dashboard() {
-  const { API_URL, token, loading: authLoading } = useAuth();
-  const location = useLocation();
-  const [data, setData] = useState({ portfolio: {}, investments: [], loans: [], policies: [], pension: null, alerts: [] });
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Wait for auth to finish loading before making API call
-    if (authLoading) {
-      setLoading(true);
-      return;
-    }
-    
-    if (!token) {
-      // If no token after auth loads, show empty state
-      setLoading(false);
-      setData({ portfolio: {}, investments: [], loans: [], policies: [], pension: null, alerts: [] });
-      return;
-    }
-    
-    // Load dashboard data
-    async function load() {
-      setLoading(true);
-      try {
-        const res = await fetch(`${API_URL}/dashboard`, { headers: { Authorization: `Bearer ${token}` } });
-        if (!res.ok) {
-          console.error('Dashboard API error:', res.status, res.statusText);
-          setData({ portfolio: {}, investments: [], loans: [], policies: [], pension: null, alerts: [] });
-        } else {
-          const json = await res.json();
-          setData(json || { portfolio: {}, investments: [], loans: [], policies: [], pension: null, alerts: [] });
-        }
-      } catch (err) {
-        console.error('Dashboard fetch error:', err);
-        setData({ portfolio: {}, investments: [], loans: [], policies: [], pension: null, alerts: [] });
-      } finally {
-        setLoading(false);
-      }
-    }
-    
-    load();
-  }, [API_URL, token, authLoading, location.pathname]);
-
-  const investments = data?.investments || [];
-  const portfolioValue = data?.portfolio?.value || 0;
-  const loansCount = data?.loans?.length || 0;
-  const policiesCount = data?.policies?.length || 0;
-  const pensionBalance = data?.pension?.balance || 0;
-  const alerts = data?.alerts || [];
+  const investments = MOCK_DATA.investments;
+  const portfolioValue = MOCK_DATA.portfolio.value;
+  const loansCount = MOCK_DATA.loans.length;
+  const policiesCount = MOCK_DATA.policies.length;
+  const pensionBalance = MOCK_DATA.pension.balance;
+  const alerts = MOCK_DATA.alerts;
   
   // Calculate investment values
   const investmentValue = investments.reduce((sum, inv) => {
@@ -71,28 +55,24 @@ export default function Dashboard() {
     const val = inv.type === 'stock' ? (inv.shares || 0) * (inv.currentPrice || inv.avgPrice || 0) : 
                 inv.type === 'bond' ? (inv.amount || 0) : 
                 (inv.amount || 0) * (inv.currentPrice || inv.avgPrice || 0);
-    // Map investment type to plural key
     const key = inv.type === 'stock' ? 'stocks' : inv.type === 'bond' ? 'bonds' : 'crypto';
     acc[key] = (acc[key] || 0) + val;
     return acc;
   }, { stocks: 0, bonds: 0, crypto: 0 });
   
-  // Get portfolio allocation from backend
-  const portfolioAllocation = data?.portfolio?.allocation || {};
+  // Get portfolio allocation from mock data
+  const portfolioAllocation = MOCK_DATA.portfolio.allocation;
   
   // Combine investment-based allocation with portfolio allocation
   const totalAllocationValue = Object.values(allocation).reduce((sum, val) => sum + val, 0);
   
-  // Start with portfolio allocation if available, then merge with investments
   let allocationPercent = { stocks: 0, bonds: 0, crypto: 0, realEstate: 0 };
   
-  // If we have investment values, calculate percentages from them
   if (totalAllocationValue > 0) {
     allocationPercent.stocks = allocation.stocks / totalAllocationValue;
     allocationPercent.bonds = allocation.bonds / totalAllocationValue;
     allocationPercent.crypto = allocation.crypto / totalAllocationValue;
-  } else if (portfolioAllocation.stocks || portfolioAllocation.bonds || portfolioAllocation.crypto || portfolioAllocation.realEstate) {
-    // If no investments but have portfolio allocation, use that
+  } else {
     allocationPercent = {
       stocks: portfolioAllocation.stocks || 0,
       bonds: portfolioAllocation.bonds || 0,
@@ -117,18 +97,6 @@ export default function Dashboard() {
     { month: 'May', value: 25000 }
   ];
 
-  // Always show something - never blank
-  if (loading || authLoading) {
-    return (
-      <Box p={8}>
-        <Heading mb={2} bgGradient="linear(to-r, blue.600, purple.600)" bgClip="text">Unified Dashboard</Heading>
-        <Box display="flex" alignItems="center" justifyContent="center" minH="50vh">
-          <Text fontSize="lg" color="gray.600">Loading dashboard...</Text>
-        </Box>
-      </Box>
-    );
-  }
-
   return (
     <Box p={6}>
       <Heading mb={2} bgGradient="linear(to-r, blue.600, purple.600)" bgClip="text">Unified Dashboard</Heading>
@@ -147,39 +115,42 @@ export default function Dashboard() {
             </Stat>
           </CardBody>
         </Card>
+        
         <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="2xl" border="1px solid rgba(255,255,255,0.5)" transition="all 0.3s" _hover={{ transform: 'translateY(-5px)', boxShadow: '3xl' }}>
           <CardBody>
             <Stat>
               <HStack mb={2}>
-                <Icon as={ViewIcon} color="blue.500" />
+                <Icon as={CheckCircleIcon} color="blue.500" />
                 <StatLabel color="gray.700">Active Loans</StatLabel>
               </HStack>
               <StatNumber color="blue.600" fontSize="3xl">{loansCount}</StatNumber>
-              <StatHelpText fontWeight="medium">Borrower + Lender</StatHelpText>
+              <StatHelpText fontWeight="medium">Microfinance</StatHelpText>
             </Stat>
           </CardBody>
         </Card>
+        
         <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="2xl" border="1px solid rgba(255,255,255,0.5)" transition="all 0.3s" _hover={{ transform: 'translateY(-5px)', boxShadow: '3xl' }}>
           <CardBody>
             <Stat>
               <HStack mb={2}>
-                <Icon as={InfoIcon} color="purple.500" />
-                <StatLabel color="gray.700">Policies</StatLabel>
+                <Icon as={CheckCircleIcon} color="purple.500" />
+                <StatLabel color="gray.700">Insurance Policies</StatLabel>
               </HStack>
               <StatNumber color="purple.600" fontSize="3xl">{policiesCount}</StatNumber>
-              <StatHelpText fontWeight="medium">Insurance</StatHelpText>
+              <StatHelpText fontWeight="medium">Active Coverage</StatHelpText>
             </Stat>
           </CardBody>
         </Card>
+        
         <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="2xl" border="1px solid rgba(255,255,255,0.5)" transition="all 0.3s" _hover={{ transform: 'translateY(-5px)', boxShadow: '3xl' }}>
           <CardBody>
             <Stat>
               <HStack mb={2}>
-                <Icon as={CheckCircleIcon} color="orange.500" />
-                <StatLabel color="gray.700">Pension</StatLabel>
+                <Icon as={ArrowUpIcon} color="orange.500" />
+                <StatLabel color="gray.700">Pension Balance</StatLabel>
               </HStack>
               <StatNumber color="orange.600" fontSize="3xl">${pensionBalance.toLocaleString()}</StatNumber>
-              <StatHelpText fontWeight="medium">Crypto-Pension</StatHelpText>
+              <StatHelpText fontWeight="medium">Retirement Fund</StatHelpText>
             </Stat>
           </CardBody>
         </Card>
@@ -187,92 +158,65 @@ export default function Dashboard() {
 
       <SimpleGrid columns={[1, 2]} gap={6} mb={8}>
         <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="2xl" border="1px solid rgba(255,255,255,0.5)">
-          <CardHeader bgGradient="linear(to-r, blue.500, purple.500)" color="white" borderRadius="lg">
-            <Heading size="md">Portfolio Growth</Heading>
-          </CardHeader>
-          <CardBody>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={monthlyData}>
-                <defs>
-                  <linearGradient id="colorGrowth" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#0088FE" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#0088FE" stopOpacity={0.2}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
-                <Area type="monotone" dataKey="value" stroke="#0088FE" strokeWidth={2} fillOpacity={1} fill="url(#colorGrowth)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </CardBody>
-        </Card>
-
-        <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="2xl" border="1px solid rgba(255,255,255,0.5)">
-          <CardHeader bgGradient="linear(to-r, green.500, teal.500)" color="white" borderRadius="lg">
-            <Heading size="md">Portfolio Allocation</Heading>
+          <CardHeader>
+            <Heading size="md" color="gray.700">Portfolio Allocation</Heading>
           </CardHeader>
           <CardBody>
             {fullPieData.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
-                  <Pie 
-                    data={fullPieData} 
-                    cx="50%" 
-                    cy="50%" 
-                    innerRadius={70}
-                    outerRadius={100} 
-                    fill="#8884d8" 
-                    dataKey="value"
-                    paddingAngle={5}
-                    label={({name, value}) => value > 0 ? `${name}: ${value}%` : ''}
-                  >
+                  <Pie data={fullPieData} cx="50%" cy="50%" outerRadius={100} fill="#8884d8" dataKey="value" label>
                     {fullPieData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => `${value}%`} />
+                  <Tooltip />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <Box textAlign="center" py={12}>
-                <Text color="gray.500">Complete coaching assessment to see your allocation</Text>
-              </Box>
+              <Text color="gray.500" textAlign="center" py={8}>No allocation data available</Text>
             )}
+          </CardBody>
+        </Card>
+
+        <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="2xl" border="1px solid rgba(255,255,255,0.5)">
+          <CardHeader>
+            <Heading size="md" color="gray.700">Portfolio Growth</Heading>
+          </CardHeader>
+          <CardBody>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={monthlyData}>
+                <defs>
+                  <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#8884d8" stopOpacity={0.2}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip />
+                <Area type="monotone" dataKey="value" stroke="#8884d8" fillOpacity={1} fill="url(#colorValue)" />
+              </AreaChart>
+            </ResponsiveContainer>
           </CardBody>
         </Card>
       </SimpleGrid>
 
       {alerts.length > 0 && (
-        <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="2xl" border="1px solid rgba(255,255,255,0.5)">
-          <CardHeader bgGradient="linear(to-r, yellow.500, orange.500)" color="white" borderRadius="lg">
-            <Heading size="md">Recent Alerts</Heading>
+        <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="2xl" border="1px solid rgba(255,255,255,0.5)" mb={8}>
+          <CardHeader>
+            <Heading size="md" color="gray.700">Recent Alerts</Heading>
           </CardHeader>
           <CardBody>
-            <VStack align="stretch" spacing={3}>
-              {alerts.map((alert) => (
-                <Card key={alert.id} variant="outline">
-                  <CardBody>
-                    <HStack>
-                      <Icon 
-                        as={alert.level === 'high' ? WarningIcon : CheckCircleIcon} 
-                        color={alert.level === 'high' ? 'red.500' : 'green.500'}
-                        fontSize="2xl"
-                      />
-                      <Text flex={1} fontWeight="medium">{alert.message}</Text>
-                      <Badge 
-                        colorScheme={alert.level === 'high' ? 'red' : 'green'}
-                        fontSize="md"
-                        px={3}
-                        py={1}
-                      >
-                        {alert.level}
-                      </Badge>
-                    </HStack>
-                  </CardBody>
-                </Card>
+            <VStack align="stretch" spacing={2}>
+              {alerts.map(alert => (
+                <HStack key={alert.id} p={3} bg="blue.50" borderRadius="md" borderLeft="4px solid" borderColor="blue.500">
+                  <Icon as={WarningIcon} color="blue.500" />
+                  <Text flex={1}>{alert.message}</Text>
+                  <Badge colorScheme="blue">{new Date(alert.ts).toLocaleDateString()}</Badge>
+                </HStack>
               ))}
             </VStack>
           </CardBody>

@@ -1,101 +1,72 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Box, Button, Heading, Input, Text, Card, CardBody, CardHeader, SimpleGrid, VStack, HStack, Badge, useToast } from '@chakra-ui/react';
-import { useAuth } from '../context/AuthContext.jsx';
+
+// Mock data - no API calls
+const MOCK_PROPERTIES = [
+  { id: '1', title: 'Nairobi Apartments', price: 250000, roi: 0.11, tokensTotal: 100000, tokensAvailable: 75000 },
+  { id: '2', title: 'Lagos Co-working', price: 450000, roi: 0.13, tokensTotal: 150000, tokensAvailable: 120000 },
+  { id: '3', title: 'Bangalore Retail', price: 600000, roi: 0.09, tokensTotal: 200000, tokensAvailable: 180000 }
+];
+
+const MOCK_HOLDINGS = [
+  { id: '1', propertyId: '1', tokens: 5000, property: MOCK_PROPERTIES[0] },
+  { id: '2', propertyId: '2', tokens: 10000, property: MOCK_PROPERTIES[1] }
+];
 
 export default function RealEstate() {
-  const { API_URL, token, loading: authLoading } = useAuth();
   const toast = useToast();
-  const [properties, setProperties] = useState([]);
+  const [properties, setProperties] = useState(MOCK_PROPERTIES);
+  const [holdings, setHoldings] = useState(MOCK_HOLDINGS);
   const [selected, setSelected] = useState('');
   const [tokens, setTokens] = useState(100);
-  const [holdings, setHoldings] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [initialLoad, setInitialLoad] = useState(true);
 
-  async function load() {
-    if (!token) {
-      setInitialLoad(false);
-      return;
-    }
-    try {
-      const res = await fetch(`${API_URL}/real-estate/properties`, { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) {
-        const data = await res.json();
-        setProperties(data || []);
-      } else {
-        console.error('Failed to load properties:', res.status);
-      }
-      const pf = await fetch(`${API_URL}/real-estate/portfolio`, { headers: { Authorization: `Bearer ${token}` } });
-      if (pf.ok) {
-        const json = await pf.json();
-        setHoldings(json.holdings || []);
-      }
-    } catch (err) {
-      console.error('Failed to load real estate data:', err);
-    } finally {
-      setInitialLoad(false);
-    }
-  }
-
-  async function purchase() {
-    if (!token) {
-      toast({ title: 'Please wait for authentication', status: 'warning' });
-      return;
-    }
+  function purchase() {
     if (!selected || !tokens || tokens <= 0) {
       toast({ title: 'Please select a property and enter token amount', status: 'warning' });
       return;
     }
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_URL}/real-estate/purchase`, { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, 
-        body: JSON.stringify({ propertyId: selected, tokens: Number(tokens) }) 
-      });
-      if (res.ok) {
-        const data = await res.json();
-        await load();
-        toast({ title: 'Purchase successful!', status: 'success', description: `Purchased ${tokens} tokens` });
-        setTokens(100);
-        setSelected('');
-      } else {
-        const errorData = await res.json().catch(() => ({ error: 'Purchase failed' }));
-        toast({ title: 'Purchase failed', status: 'error', description: errorData.error || 'Please try again' });
-      }
-    } catch (err) {
-      toast({ title: 'Network error', status: 'error', description: 'Could not connect to server' });
-    } finally {
-      setLoading(false);
-    }
-  }
 
-  useEffect(() => {
-    if (!authLoading && token) {
-      load();
-    } else if (!authLoading && !token) {
-      setInitialLoad(false);
+    const property = properties.find(p => p.id === selected);
+    if (!property) {
+      toast({ title: 'Property not found', status: 'error' });
+      return;
     }
-  }, [API_URL, token, authLoading]);
+
+    if (tokens > property.tokensAvailable) {
+      toast({ title: 'Not enough tokens available', status: 'error' });
+      return;
+    }
+
+    // Update property tokens
+    setProperties(properties.map(p => 
+      p.id === selected ? { ...p, tokensAvailable: p.tokensAvailable - tokens } : p
+    ));
+
+    // Add to holdings
+    const existingHolding = holdings.find(h => h.propertyId === selected);
+    if (existingHolding) {
+      setHoldings(holdings.map(h => 
+        h.propertyId === selected ? { ...h, tokens: h.tokens + tokens } : h
+      ));
+    } else {
+      setHoldings([...holdings, {
+        id: Date.now().toString(),
+        propertyId: selected,
+        tokens: tokens,
+        property: property
+      }]);
+    }
+
+    toast({ title: 'Purchase successful!', status: 'success', description: `Purchased ${tokens} tokens` });
+    setTokens(100);
+    setSelected('');
+  }
 
   const selectedProperty = properties.find(p => p.id === selected);
-
-  if (authLoading || initialLoad) {
-    return (
-      <Box p={6}>
-        <Heading mb={6} bgGradient="linear(to-r, blue.600, purple.600)" bgClip="text">Tokenized Real Estate Investment</Heading>
-        <Box p={8}><Text>Loading properties...</Text></Box>
-      </Box>
-    );
-  }
 
   return (
     <Box p={6}>
       <Heading mb={6} bgGradient="linear(to-r, blue.600, purple.600)" bgClip="text">Tokenized Real Estate Investment</Heading>
-      
-      {properties.length === 0 && !initialLoad && (
-        <Card mb={8}><CardBody><Text color="gray.500">No properties available</Text></CardBody></Card>
-      )}
       
       <SimpleGrid columns={[1, 2, 3]} gap={6} mb={8}>
         {properties.map((p) => (
@@ -136,7 +107,7 @@ export default function RealEstate() {
                 <Text fontSize="sm" color="gray.600">Available tokens: {selectedProperty.tokensAvailable.toLocaleString()}</Text>
               </Box>
               <Input type="number" placeholder="Number of tokens" value={tokens} onChange={e => setTokens(e.target.value)} maxW="sm" size="lg" />
-              <Button onClick={purchase} isDisabled={!selected || loading} colorScheme="blue" isLoading={loading} size="lg">
+              <Button onClick={purchase} colorScheme="blue" size="lg">
                 Purchase Tokens
               </Button>
             </VStack>

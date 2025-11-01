@@ -1,113 +1,64 @@
-import React, { useEffect, useState } from 'react';
-import { Box, Button, Heading, Input, Text, Card, CardBody, CardHeader, SimpleGrid, Stat, StatLabel, StatNumber, StatHelpText, VStack, useToast, HStack, Icon, Badge, Alert, AlertIcon } from '@chakra-ui/react';
-import { useAuth } from '../context/AuthContext.jsx';
-import { ResponsiveContainer, AreaChart, Area, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
+import React, { useState } from 'react';
+import { Box, Button, Heading, Input, Text, Card, CardBody, CardHeader, SimpleGrid, Stat, StatLabel, StatNumber, StatHelpText, VStack, useToast, HStack, Icon, Badge } from '@chakra-ui/react';
+import { ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 import { ViewIcon, ArrowUpIcon, CheckCircleIcon, InfoIcon } from '@chakra-ui/icons';
 
+// Mock data - no API calls
+const MOCK_ACCOUNT = {
+  balance: 5000,
+  monthlyContribution: 200,
+  apy: 0.08,
+  history: []
+};
+
 export default function Pension() {
-  const { API_URL, token, loading: authLoading } = useAuth();
   const toast = useToast();
-  const [account, setAccount] = useState(null);
+  const [account, setAccount] = useState(MOCK_ACCOUNT);
   const [amount, setAmount] = useState(100);
   const [sim, setSim] = useState(null);
-  const [loading, setLoading] = useState(false);
 
-  const [initialLoad, setInitialLoad] = useState(true);
-
-  async function load() {
-    if (!token) {
-      setInitialLoad(false);
-      return;
-    }
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_URL}/pension/account`, { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) {
-        const data = await res.json();
-        setAccount(data);
-      } else {
-        const errorData = await res.json().catch(() => ({}));
-        console.error('Failed to load pension account:', res.status, errorData);
-        toast({ title: 'Failed to load account', status: 'error', description: errorData.error || 'Please try again' });
-      }
-    } catch (err) {
-      console.error('Failed to load account:', err);
-      toast({ title: 'Network error', status: 'error', description: 'Could not connect to server' });
-    } finally {
-      setLoading(false);
-      setInitialLoad(false);
-    }
-  }
-
-  async function deposit() {
-    if (!token) {
-      toast({ title: 'Please wait for authentication', status: 'warning' });
-      return;
-    }
+  function deposit() {
     if (!amount || amount <= 0) {
       toast({ title: 'Please enter a valid amount', status: 'warning' });
       return;
     }
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_URL}/pension/deposit`, { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, 
-        body: JSON.stringify({ amount: Number(amount) }) 
-      });
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: 'Deposit failed' }));
-        throw new Error(errorData.error || 'Deposit failed');
-      }
-      const data = await res.json();
-      setAccount(data);
-      toast({ title: 'Deposit successful!', status: 'success', description: `Added $${amount} to your pension` });
-      setAmount(100);
-    } catch (err) {
-      toast({ title: 'Deposit failed', status: 'error', description: err.message || 'Please try again' });
-    } finally {
-      setLoading(false);
-    }
+    
+    setAccount({
+      ...account,
+      balance: account.balance + Number(amount),
+      history: [...account.history, { type: 'deposit', amount: Number(amount), ts: Date.now() }]
+    });
+    
+    toast({ title: 'Deposit successful!', status: 'success', description: `Added $${amount} to your pension` });
+    setAmount(100);
   }
 
-  async function simulate() {
-    if (!token) {
-      toast({ title: 'Please wait for authentication', status: 'warning' });
-      return;
-    }
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_URL}/pension/simulate`, { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, 
-        body: JSON.stringify({ months: 24 }) 
+  function simulate() {
+    const months = 24;
+    const monthlyRate = account.apy / 12;
+    const history = [];
+    let currentValue = account.balance;
+
+    for (let i = 0; i <= months; i++) {
+      history.push({
+        month: `Month ${i}`,
+        value: Math.round(currentValue)
       });
-      if (res.ok) {
-        const data = await res.json();
-        setSim(data);
-        toast({ title: 'Simulation complete!', status: 'success' });
-      } else {
-        const errorData = await res.json().catch(() => ({}));
-        toast({ title: 'Simulation failed', status: 'error', description: errorData.error || 'Please try again' });
+      if (i < months) {
+        currentValue = currentValue * (1 + monthlyRate) + account.monthlyContribution;
       }
-    } catch (err) {
-      console.error('Simulation failed:', err);
-      toast({ title: 'Network error', status: 'error', description: 'Could not connect to server' });
-    } finally {
-      setLoading(false);
     }
+
+    setSim({
+      finalValue: Math.round(currentValue),
+      history: history
+    });
+
+    toast({ title: 'Simulation complete!', status: 'success' });
   }
 
-  useEffect(() => {
-    if (!authLoading && token) {
-      load();
-    } else if (!authLoading && !token) {
-      setInitialLoad(false);
-    }
-  }, [API_URL, token, authLoading]);
-
-  const simData = sim ? sim.history.map((h, idx) => ({ month: h.month, value: h.value })) : [];
-  const projectedGrowth = sim ? sim.finalValue - (account?.balance || 0) : 0;
+  const simData = sim ? sim.history.map((h, idx) => ({ month: h.month.replace('Month ', ''), value: h.value })) : [];
+  const projectedGrowth = sim ? sim.finalValue - account.balance : 0;
 
   return (
     <Box p={6}>
@@ -116,67 +67,57 @@ export default function Pension() {
         <Heading>Crypto-Pension Plans</Heading>
       </HStack>
       
-      {initialLoad && authLoading && (
-        <Box p={8}><Text>Loading...</Text></Box>
-      )}
-      
       <SimpleGrid columns={[1, 2, 4]} gap={6} mb={8}>
-        {account ? (
-          <>
-            <Card bgGradient="linear(to-br, green.400, green.600)" color="white" boxShadow="2xl">
-              <CardBody>
-                <Stat>
-                  <HStack mb={2}>
-                    <Icon as={CheckCircleIcon} />
-                    <StatLabel opacity={0.9}>Current Balance</StatLabel>
-                  </HStack>
-                  <StatNumber fontSize="3xl">${account.balance.toLocaleString()}</StatNumber>
-                  <StatHelpText opacity={0.8}>Crypto Assets</StatHelpText>
-                </Stat>
-              </CardBody>
-            </Card>
-            <Card bgGradient="linear(to-br, blue.400, blue.600)" color="white" boxShadow="2xl">
-              <CardBody>
-                <Stat>
-                  <HStack mb={2}>
-                    <Icon as={ArrowUpIcon} />
-                    <StatLabel opacity={0.9}>APY Rate</StatLabel>
-                  </HStack>
-                  <StatNumber fontSize="3xl">{(account.apy * 100).toFixed(2)}%</StatNumber>
-                  <StatHelpText opacity={0.8}>Annual Return</StatHelpText>
-                </Stat>
-              </CardBody>
-            </Card>
-            <Card bgGradient="linear(to-br, purple.400, purple.600)" color="white" boxShadow="2xl">
-              <CardBody>
-                <Stat>
-                  <HStack mb={2}>
-                    <Icon as={InfoIcon} />
-                    <StatLabel opacity={0.9}>Monthly Deposit</StatLabel>
-                  </HStack>
-                  <StatNumber fontSize="3xl">${account.monthlyContribution}</StatNumber>
-                  <StatHelpText opacity={0.8}>Auto Deposit</StatHelpText>
-                </Stat>
-              </CardBody>
-            </Card>
-            <Card bgGradient="linear(to-br, orange.400, orange.600)" color="white" boxShadow="2xl">
-              <CardBody>
-                <Stat>
-                  <HStack mb={2}>
-                    <Icon as={ArrowUpIcon} />
-                    <StatLabel opacity={0.9}>Total Value</StatLabel>
-                  </HStack>
-                  <StatNumber fontSize="3xl">
-                    ${((account.balance * (1 + account.apy)) || 0).toLocaleString()}
-                  </StatNumber>
-                  <StatHelpText opacity={0.8}>With Growth</StatHelpText>
-                </Stat>
-              </CardBody>
-            </Card>
-          </>
-        ) : (
-          <Card><CardBody><Text>Loading...</Text></CardBody></Card>
-        )}
+        <Card bgGradient="linear(to-br, green.400, green.600)" color="white" boxShadow="2xl">
+          <CardBody>
+            <Stat>
+              <HStack mb={2}>
+                <Icon as={CheckCircleIcon} />
+                <StatLabel opacity={0.9}>Current Balance</StatLabel>
+              </HStack>
+              <StatNumber fontSize="3xl">${account.balance.toLocaleString()}</StatNumber>
+              <StatHelpText opacity={0.8}>Crypto Assets</StatHelpText>
+            </Stat>
+          </CardBody>
+        </Card>
+        <Card bgGradient="linear(to-br, blue.400, blue.600)" color="white" boxShadow="2xl">
+          <CardBody>
+            <Stat>
+              <HStack mb={2}>
+                <Icon as={ArrowUpIcon} />
+                <StatLabel opacity={0.9}>APY Rate</StatLabel>
+              </HStack>
+              <StatNumber fontSize="3xl">{(account.apy * 100).toFixed(2)}%</StatNumber>
+              <StatHelpText opacity={0.8}>Annual Return</StatHelpText>
+            </Stat>
+          </CardBody>
+        </Card>
+        <Card bgGradient="linear(to-br, purple.400, purple.600)" color="white" boxShadow="2xl">
+          <CardBody>
+            <Stat>
+              <HStack mb={2}>
+                <Icon as={InfoIcon} />
+                <StatLabel opacity={0.9}>Monthly Deposit</StatLabel>
+              </HStack>
+              <StatNumber fontSize="3xl">${account.monthlyContribution}</StatNumber>
+              <StatHelpText opacity={0.8}>Auto Deposit</StatHelpText>
+            </Stat>
+          </CardBody>
+        </Card>
+        <Card bgGradient="linear(to-br, orange.400, orange.600)" color="white" boxShadow="2xl">
+          <CardBody>
+            <Stat>
+              <HStack mb={2}>
+                <Icon as={ArrowUpIcon} />
+                <StatLabel opacity={0.9}>Total Value</StatLabel>
+              </HStack>
+              <StatNumber fontSize="3xl">
+                ${((account.balance * (1 + account.apy)) || 0).toLocaleString()}
+              </StatNumber>
+              <StatHelpText opacity={0.8}>With Growth</StatHelpText>
+            </Stat>
+          </CardBody>
+        </Card>
       </SimpleGrid>
 
       <Card mb={8} bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="2xl" border="1px solid rgba(255,255,255,0.5)">
@@ -202,7 +143,7 @@ export default function Pension() {
               <Button onClick={() => setAmount(1000)} variant="outline" size="sm">$1,000</Button>
               <Button onClick={() => setAmount(5000)} variant="outline" size="sm">$5,000</Button>
             </HStack>
-            <Button onClick={deposit} isLoading={loading} colorScheme="blue" size="lg" w="full">
+            <Button onClick={deposit} colorScheme="blue" size="lg" w="full">
               Deposit ${amount || 0}
             </Button>
           </VStack>
@@ -229,10 +170,10 @@ export default function Pension() {
                 <Box textAlign="center" p={6} bgGradient="linear(to-br, blue.50, blue.100)" borderRadius="lg">
                   <Text fontSize="xs" color="gray.600" mb={2}>Starting Balance</Text>
                   <Text fontSize="4xl" fontWeight="bold" color="blue.600">
-                    ${(account?.balance || 0).toLocaleString()}
+                    ${account.balance.toLocaleString()}
                   </Text>
                   <Badge mt={2} colorScheme="blue" fontSize="md">
-                    {account?.apy && `${(account.apy * 100).toFixed(2)}% APY`}
+                    {(account.apy * 100).toFixed(2)}% APY
                   </Badge>
                 </Box>
               </SimpleGrid>

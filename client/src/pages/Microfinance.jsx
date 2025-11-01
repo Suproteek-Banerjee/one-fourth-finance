@@ -1,256 +1,278 @@
-import React, { useEffect, useState } from 'react';
-import { Box, Button, Heading, Input, Text, Card, CardBody, CardHeader, SimpleGrid, VStack, HStack, Badge, Divider, Tabs, TabList, TabPanels, Tab, TabPanel, Table, Thead, Tbody, Tr, Th, Td, Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, useDisclosure, useToast } from '@chakra-ui/react';
-import { useAuth } from '../context/AuthContext.jsx';
+import React, { useState } from 'react';
+import { Box, Button, Heading, Input, Text, Card, CardBody, CardHeader, SimpleGrid, VStack, HStack, Badge, Tabs, TabList, TabPanels, Tab, TabPanel, Table, Thead, Tbody, Tr, Th, Td, Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, useDisclosure, useToast } from '@chakra-ui/react';
+
+// Mock data - no API calls
+const MOCK_LOANS = [
+  { id: '1', borrowerId: 'user1', amount: 1500, rate: 0.18, termMonths: 12, status: 'active', funded: 900, needed: 600, purpose: 'Small Business' }
+];
+
+const MOCK_MY_LOANS = {
+  borrower: [
+    { id: '2', amount: 1000, rate: 0.15, termMonths: 12, status: 'active', funded: 1000, purpose: 'Education' }
+  ],
+  lender: []
+};
 
 export default function Microfinance() {
-  const { API_URL, token, loading: authLoading } = useAuth();
   const toast = useToast();
   const [amount, setAmount] = useState(1000);
   const [income, setIncome] = useState(1200);
   const [creditScore, setCreditScore] = useState(680);
   const [result, setResult] = useState(null);
-  const [myLoans, setMyLoans] = useState({ borrower: [], lender: [] });
-  const [loading, setLoading] = useState(false);
+  const [myLoans, setMyLoans] = useState(MOCK_MY_LOANS);
+  const [loans, setLoans] = useState(MOCK_LOANS);
   const [schedule, setSchedule] = useState([]);
   const { isOpen, onOpen, onClose } = useDisclosure();
 
-  async function apply() {
-    if (!token) {
-      toast({ title: 'Please wait for authentication', status: 'warning' });
-      return;
-    }
+  function apply() {
     if (!amount || !income || !creditScore) {
       toast({ title: 'Please fill in all fields', status: 'warning' });
       return;
     }
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_URL}/microfinance/apply`, { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, 
-        body: JSON.stringify({ amount: Number(amount), income: Number(income), creditScore: Number(creditScore) }) 
+
+    // Simple approval logic
+    const debtToIncome = (amount / income) * 12;
+    const approved = debtToIncome < 0.5 && creditScore >= 600;
+    const probability = creditScore >= 700 ? 0.9 : creditScore >= 650 ? 0.7 : creditScore >= 600 ? 0.5 : 0.3;
+
+    setResult({
+      approved,
+      approvalProbability: probability,
+      suggestedRate: approved ? 0.15 : 0.25,
+      suggestedAmount: approved ? amount : amount * 0.8
+    });
+
+    if (approved) {
+      setMyLoans({
+        ...myLoans,
+        borrower: [...myLoans.borrower, {
+          id: Date.now().toString(),
+          amount: amount,
+          rate: 0.15,
+          termMonths: 12,
+          status: 'active',
+          funded: 0,
+          purpose: 'New Loan'
+        }]
       });
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: 'Application failed' }));
-        throw new Error(errorData.error || 'Application failed');
-      }
-      const data = await res.json();
-      setResult(data);
-      toast({ title: data.approved ? 'Loan Approved!' : 'Loan Rejected', status: data.approved ? 'success' : 'error', description: `Probability: ${Math.round(data.approvalProbability * 100)}%` });
-      await loadMy();
-    } catch (err) {
-      toast({ title: 'Application failed', status: 'error', description: err.message || 'Please try again' });
-    } finally {
-      setLoading(false);
     }
+
+    toast({ title: approved ? 'Loan Approved!' : 'Loan Rejected', status: approved ? 'success' : 'error', description: `Probability: ${Math.round(probability * 100)}%` });
   }
 
-  async function fund(loanId) {
-    if (!token) {
-      toast({ title: 'Please wait for authentication', status: 'warning' });
-      return;
-    }
-    try {
-      const res = await fetch(`${API_URL}/microfinance/fund`, { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, 
-        body: JSON.stringify({ loanId, amount: 200 }) 
+  function fund(loanId) {
+    const loan = loans.find(l => l.id === loanId);
+    if (!loan) return;
+
+    const newFunded = Math.min(loan.funded + 200, loan.amount);
+    setLoans(loans.map(l => l.id === loanId ? { ...l, funded: newFunded } : l));
+
+    setMyLoans({
+      ...myLoans,
+      lender: [...myLoans.lender, {
+        id: Date.now().toString(),
+        loanId: loanId,
+        amount: 200,
+        status: 'active'
+      }]
+    });
+
+    toast({ title: 'Successfully funded $200!', status: 'success' });
+  }
+
+  function viewSchedule(loanId) {
+    const loan = loans.find(l => l.id === loanId) || myLoans.borrower.find(l => l.id === loanId);
+    if (!loan) return;
+
+    const monthlyPayment = (loan.amount * (loan.rate / 12)) / (1 - Math.pow(1 + (loan.rate / 12), -loan.termMonths));
+    const scheduleData = [];
+    let remaining = loan.amount;
+
+    for (let i = 1; i <= loan.termMonths; i++) {
+      const interest = remaining * (loan.rate / 12);
+      const principal = monthlyPayment - interest;
+      remaining -= principal;
+      scheduleData.push({
+        month: i,
+        payment: Math.round(monthlyPayment),
+        principal: Math.round(principal),
+        interest: Math.round(interest),
+        remaining: Math.round(remaining)
       });
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: 'Funding failed' }));
-        throw new Error(errorData.error || 'Funding failed');
-      }
-      toast({ title: 'Successfully funded $200!', status: 'success' });
-      await loadMy();
-    } catch (err) {
-      toast({ title: 'Funding failed', status: 'error', description: err.message || 'Please try again' });
     }
-  }
 
-  async function loadMy() {
-    if (!token) return;
-    try {
-      const res = await fetch(`${API_URL}/microfinance/my-loans`, { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) {
-        const data = await res.json();
-        setMyLoans(data);
-      }
-    } catch (err) {
-      console.error('Failed to load loans:', err);
-    }
+    setSchedule(scheduleData);
+    onOpen();
   }
-
-  async function viewSchedule(loanId) {
-    if (!token) return;
-    try {
-      const res = await fetch(`${API_URL}/microfinance/repayment-schedule/${loanId}`, { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) {
-        const data = await res.json();
-        setSchedule(data.schedule);
-        onOpen();
-      }
-    } catch (err) {
-      console.error('Failed to load schedule:', err);
-    }
-  }
-
-  useEffect(() => {
-    if (!authLoading && token) {
-      loadMy();
-    }
-  }, [API_URL, token, authLoading]);
 
   return (
     <Box p={6}>
-      <Heading mb={6} bgGradient="linear(to-r, blue.600, purple.600)" bgClip="text">Cross-Border Microfinance</Heading>
+      <Heading mb={6} bgGradient="linear(to-r, blue.600, purple.600)" bgClip="text">Microfinance & Peer-to-Peer Lending</Heading>
       
-      <Card mb={8} bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="2xl" border="1px solid rgba(255,255,255,0.5)">
-        <CardHeader>
-          <Heading size="md">Apply for a Loan</Heading>
-        </CardHeader>
-        <CardBody>
-          <SimpleGrid columns={[1, 3]} gap={4}>
-            <Box>
-              <Text mb={2} fontWeight="medium">Loan Amount ($)</Text>
-              <Input type="number" placeholder="Amount" value={amount} onChange={e => setAmount(e.target.value)} />
-            </Box>
-            <Box>
-              <Text mb={2} fontWeight="medium">Monthly Income ($)</Text>
-              <Input type="number" placeholder="Income" value={income} onChange={e => setIncome(e.target.value)} />
-            </Box>
-            <Box>
-              <Text mb={2} fontWeight="medium">Credit Score</Text>
-              <Input type="number" placeholder="Credit Score" value={creditScore} onChange={e => setCreditScore(e.target.value)} />
-            </Box>
-          </SimpleGrid>
-          <Button onClick={apply} isLoading={loading} colorScheme="blue" size="lg" mt={4} w="full">Apply for Loan</Button>
-          
-          {result && (
-            <Box mt={4} p={4} bgGradient={`linear(to-r, ${result.approved ? 'green' : 'red'}.100, ${result.approved ? 'green' : 'red'}.200)`} borderRadius="md">
-              <HStack justify="space-between">
-                <Box>
-                  <Text fontWeight="bold" fontSize="lg">{result.approved ? 'Loan Approved!' : 'Loan Rejected'}</Text>
-                  <Text fontSize="sm" color="gray.600">Approval Probability: {Math.round(result.approvalProbability * 100)}%</Text>
+      <SimpleGrid columns={[1, 2]} gap={6} mb={8}>
+        <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="2xl" border="1px solid rgba(255,255,255,0.5)">
+          <CardHeader>
+            <Heading size="md">Apply for a Loan</Heading>
+          </CardHeader>
+          <CardBody>
+            <VStack align="stretch" spacing={4}>
+              <Box>
+                <Text mb={2} fontWeight="medium">Loan Amount ($)</Text>
+                <Input type="number" value={amount} onChange={e => setAmount(e.target.value)} />
+              </Box>
+              <Box>
+                <Text mb={2} fontWeight="medium">Monthly Income ($)</Text>
+                <Input type="number" value={income} onChange={e => setIncome(e.target.value)} />
+              </Box>
+              <Box>
+                <Text mb={2} fontWeight="medium">Credit Score</Text>
+                <Input type="number" value={creditScore} onChange={e => setCreditScore(e.target.value)} />
+              </Box>
+              <Button onClick={apply} colorScheme="blue" size="lg">Apply for Loan</Button>
+              
+              {result && (
+                <Box p={4} bg={result.approved ? 'green.50' : 'red.50'} borderRadius="md" border="1px solid" borderColor={result.approved ? 'green.200' : 'red.200'}>
+                  <Text fontWeight="bold" mb={2}>{result.approved ? '✓ Approved' : '✗ Rejected'}</Text>
+                  <Text fontSize="sm">Approval Probability: {Math.round(result.approvalProbability * 100)}%</Text>
+                  {result.approved && (
+                    <VStack align="stretch" mt={2} spacing={1}>
+                      <Text fontSize="sm">Suggested Rate: {(result.suggestedRate * 100).toFixed(1)}%</Text>
+                      <Text fontSize="sm">Suggested Amount: ${result.suggestedAmount}</Text>
+                    </VStack>
+                  )}
                 </Box>
-                <Badge colorScheme={result.approved ? 'green' : 'red'} fontSize="md" px={4} py={2}>
-                  {result.approved ? 'APPROVED' : 'REJECTED'}
-                </Badge>
-              </HStack>
-            </Box>
-          )}
-        </CardBody>
-      </Card>
+              )}
+            </VStack>
+          </CardBody>
+        </Card>
 
-      <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="2xl" border="1px solid rgba(255,255,255,0.5)">
-        <CardHeader>
-          <Heading size="md">My Loans</Heading>
-        </CardHeader>
-        <CardBody>
-          <Tabs>
-            <TabList>
-              <Tab>As Borrower ({myLoans.borrower.length})</Tab>
-              <Tab>As Lender ({myLoans.lender.length})</Tab>
-            </TabList>
+        <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="2xl" border="1px solid rgba(255,255,255,0.5)">
+          <CardHeader>
+            <Heading size="md">Available Loans to Fund</Heading>
+          </CardHeader>
+          <CardBody>
+            <VStack align="stretch" spacing={3}>
+              {loans.filter(l => l.funded < l.amount).map(loan => (
+                <Card key={loan.id} size="sm">
+                  <CardBody>
+                    <HStack justify="space-between" mb={2}>
+                      <Text fontWeight="bold">${loan.amount}</Text>
+                      <Badge colorScheme="blue">{(loan.rate * 100).toFixed(0)}% APR</Badge>
+                    </HStack>
+                    <Text fontSize="sm" color="gray.600" mb={2}>{loan.purpose}</Text>
+                    <Text fontSize="sm">Progress: ${loan.funded} / ${loan.amount}</Text>
+                    <Button size="sm" onClick={() => fund(loan.id)} mt={2} w="full">Fund $200</Button>
+                  </CardBody>
+                </Card>
+              ))}
+            </VStack>
+          </CardBody>
+        </Card>
+      </SimpleGrid>
 
-            <TabPanels>
-              <TabPanel>
+      <Tabs>
+        <TabList>
+          <Tab>My Loans (Borrower)</Tab>
+          <Tab>My Funding (Lender)</Tab>
+        </TabList>
+
+        <TabPanels>
+          <TabPanel>
+            <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="xl">
+              <CardBody>
                 {myLoans.borrower.length > 0 ? (
-                  <VStack align="stretch" spacing={4}>
-                    {myLoans.borrower.map((loan) => (
-                      <Card key={loan.id}>
-                        <CardBody>
-                          <HStack justify="space-between">
-                            <Box>
-                              <Text fontWeight="bold">${loan.amount.toLocaleString()}</Text>
-                              <Text fontSize="sm" color="gray.600">
-                                {loan.termMonths} months @ {(loan.rate * 100).toFixed(0)}%
-                              </Text>
-                            </Box>
-                            <Badge colorScheme={loan.status === 'active' ? 'green' : loan.status === 'pending_funding' ? 'yellow' : 'red'}>
-                              {loan.status}
-                            </Badge>
-                          </HStack>
-                          <Divider my={3} />
-                          <Text fontSize="sm">Funded: ${loan.funded.toLocaleString()} / ${loan.amount.toLocaleString()}</Text>
-                          <HStack mt={3} spacing={2}>
-                            {loan.status === 'pending_funding' && (
-                              <Button size="sm" onClick={() => fund(loan.id)}>Fund $200</Button>
-                            )}
-                            {loan.status === 'active' && (
-                              <Button size="sm" onClick={() => viewSchedule(loan.id)} variant="outline">View Schedule</Button>
-                            )}
-                          </HStack>
-                        </CardBody>
-                      </Card>
-                    ))}
-                  </VStack>
+                  <Table>
+                    <Thead>
+                      <Tr>
+                        <Th>Amount</Th>
+                        <Th>Rate</Th>
+                        <Th>Term</Th>
+                        <Th>Funded</Th>
+                        <Th>Status</Th>
+                        <Th>Actions</Th>
+                      </Tr>
+                    </Thead>
+                    <Tbody>
+                      {myLoans.borrower.map(loan => (
+                        <Tr key={loan.id}>
+                          <Td>${loan.amount}</Td>
+                          <Td>{(loan.rate * 100).toFixed(1)}%</Td>
+                          <Td>{loan.termMonths} months</Td>
+                          <Td>${loan.funded} / ${loan.amount}</Td>
+                          <Td><Badge colorScheme="green">{loan.status}</Badge></Td>
+                          <Td>
+                            <Button size="sm" onClick={() => viewSchedule(loan.id)} variant="outline">View Schedule</Button>
+                          </Td>
+                        </Tr>
+                      ))}
+                    </Tbody>
+                  </Table>
                 ) : (
-                  <Text color="gray.500">No borrower loans</Text>
+                  <Text color="gray.500">No loans as borrower</Text>
                 )}
-              </TabPanel>
+              </CardBody>
+            </Card>
+          </TabPanel>
 
-              <TabPanel>
+          <TabPanel>
+            <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="xl">
+              <CardBody>
                 {myLoans.lender.length > 0 ? (
-                  <VStack align="stretch" spacing={4}>
-                    {myLoans.lender.map((loan) => (
-                      <Card key={loan.id}>
-                        <CardBody>
-                          <HStack justify="space-between">
-                            <Box>
-                              <Text fontWeight="bold">${loan.amount.toLocaleString()}</Text>
-                              <Text fontSize="sm" color="gray.600">
-                                {loan.termMonths} months @ {(loan.rate * 100).toFixed(0)}%
-                              </Text>
-                            </Box>
-                            <Badge colorScheme={loan.status === 'active' ? 'green' : 'yellow'}>
-                              {loan.status}
-                            </Badge>
-                          </HStack>
-                        </CardBody>
-                      </Card>
-                    ))}
-                  </VStack>
+                  <Table>
+                    <Thead>
+                      <Tr>
+                        <Th>Loan ID</Th>
+                        <Th>Amount</Th>
+                        <Th>Status</Th>
+                      </Tr>
+                    </Thead>
+                    <Tbody>
+                      {myLoans.lender.map(funding => (
+                        <Tr key={funding.id}>
+                          <Td>{funding.loanId}</Td>
+                          <Td>${funding.amount}</Td>
+                          <Td><Badge colorScheme="green">{funding.status}</Badge></Td>
+                        </Tr>
+                      ))}
+                    </Tbody>
+                  </Table>
                 ) : (
-                  <Text color="gray.500">No lender loans</Text>
+                  <Text color="gray.500">No loans funded as lender</Text>
                 )}
-              </TabPanel>
-            </TabPanels>
-          </Tabs>
-        </CardBody>
-      </Card>
+              </CardBody>
+            </Card>
+          </TabPanel>
+        </TabPanels>
+      </Tabs>
 
-      <Modal isOpen={isOpen} onClose={onClose} size="lg">
+      <Modal isOpen={isOpen} onClose={onClose} size="xl">
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>Loan Repayment Schedule</ModalHeader>
+          <ModalHeader>Repayment Schedule</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
-            {schedule.length > 0 ? (
-              <Table variant="simple" size="sm">
-                <Thead>
-                  <Tr>
-                    <Th>Installment</Th>
-                    <Th>Payment</Th>
-                    <Th>Principal</Th>
-                    <Th>Interest</Th>
-                    <Th>Balance</Th>
+            <Table size="sm">
+              <Thead>
+                <Tr>
+                  <Th>Month</Th>
+                  <Th>Payment</Th>
+                  <Th>Principal</Th>
+                  <Th>Interest</Th>
+                  <Th>Remaining</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {schedule.map((row, i) => (
+                  <Tr key={i}>
+                    <Td>{row.month}</Td>
+                    <Td>${row.payment}</Td>
+                    <Td>${row.principal}</Td>
+                    <Td>${row.interest}</Td>
+                    <Td>${row.remaining}</Td>
                   </Tr>
-                </Thead>
-                <Tbody>
-                  {schedule.map((item) => (
-                    <Tr key={item.installment}>
-                      <Td>{item.installment}</Td>
-                      <Td>${item.payment.toFixed(2)}</Td>
-                      <Td>${item.principal.toFixed(2)}</Td>
-                      <Td>${item.interest.toFixed(2)}</Td>
-                      <Td>${item.balance.toFixed(2)}</Td>
-                    </Tr>
-                  ))}
-                </Tbody>
-              </Table>
-            ) : (
-              <Text>Loading schedule...</Text>
-            )}
+                ))}
+              </Tbody>
+            </Table>
           </ModalBody>
           <ModalFooter>
             <Button onClick={onClose}>Close</Button>

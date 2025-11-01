@@ -1,89 +1,57 @@
-import React, { useEffect, useState } from 'react';
-import { Box, Button, Heading, Input, Select, SimpleGrid, Text, Card, CardBody, CardHeader, VStack, HStack, Badge, Divider, Icon } from '@chakra-ui/react';
-import { useAuth } from '../context/AuthContext.jsx';
-import { CheckCircleIcon, BellIcon } from '@chakra-ui/icons';
+import React, { useState } from 'react';
+import { Box, Button, Heading, Select, SimpleGrid, Text, Card, CardBody, CardHeader, VStack, HStack, Badge } from '@chakra-ui/react';
+import { CheckCircleIcon } from '@chakra-ui/icons';
+
+// Mock data - no API calls
+const MOCK_PRODUCTS = [
+  { id: '1', name: 'OFF Basic Health', premiumBase: 25, coverage: 10000, tier: 'basic' },
+  { id: '2', name: 'OFF Family Shield', premiumBase: 40, coverage: 25000, tier: 'standard' },
+  { id: '3', name: 'OFF Global Travel', premiumBase: 15, coverage: 5000, tier: 'travel' }
+];
+
+const MOCK_POLICIES = [
+  { id: '1', productId: '1', name: 'OFF Basic Health', premium: 25, coverage: 10000, status: 'active' }
+];
+
+const MOCK_COMMUNITIES = [
+  { id: '1', name: 'OFF Community Care', contributionMonthly: 10, members: 125 }
+];
 
 export default function Insurance() {
-  const { API_URL, token, loading: authLoading } = useAuth();
-  const [products, setProducts] = useState([]);
+  const [products] = useState(MOCK_PRODUCTS);
+  const [policies, setPolicies] = useState(MOCK_POLICIES);
+  const [communities] = useState(MOCK_COMMUNITIES);
   const [selected, setSelected] = useState('');
   const [quote, setQuote] = useState(null);
-  const [my, setMy] = useState({ policies: [], claims: [] });
-  const [communities, setCommunities] = useState([]);
-  const [newCommunityName, setNewCommunityName] = useState('');
-  const [newCommunityContribution, setNewCommunityContribution] = useState(10);
-  const [selectedCommunity, setSelectedCommunity] = useState('');
-  const [contributionAmount, setContributionAmount] = useState(5);
-  const [notifications, setNotifications] = useState([]);
 
-  async function load() {
-    if (!token) return;
-    try {
-      const res = await fetch(`${API_URL}/insurance/products`, { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) {
-        setProducts(await res.json());
-      }
-      const mine = await fetch(`${API_URL}/insurance/my`, { headers: { Authorization: `Bearer ${token}` } });
-      if (mine.ok) {
-        setMy(await mine.json());
-      }
-      const comm = await fetch(`${API_URL}/insurance/communities`, { headers: { Authorization: `Bearer ${token}` } });
-      if (comm.ok) {
-        setCommunities(await comm.json());
-      }
-      const notes = await fetch(`${API_URL}/insurance/notifications`, { headers: { Authorization: `Bearer ${token}` } });
-      if (notes.ok) {
-        setNotifications(await notes.json());
-      }
-    } catch (err) {
-      console.error('Failed to load insurance data:', err);
-    }
-  }
-
-  async function getQuote() {
-    if (!token) return;
-    if (!selected) {
-      return;
-    }
-    try {
-      const res = await fetch(`${API_URL}/insurance/quote`, { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, 
-        body: JSON.stringify({ productId: selected, age: 32, smoker: false }) 
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setQuote(data);
-      } else {
-        console.error('Failed to get quote');
-      }
-    } catch (err) {
-      console.error('Quote failed:', err);
-    }
-  }
-
-  async function purchase() {
-    if (!token) return;
+  function getQuote() {
     if (!selected) return;
-    try {
-      const res = await fetch(`${API_URL}/insurance/purchase`, { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, 
-        body: JSON.stringify({ productId: selected }) 
+    const product = products.find(p => p.id === selected);
+    if (product) {
+      setQuote({
+        premium: product.premiumBase,
+        coverage: product.coverage,
+        monthly: product.premiumBase
       });
-      if (res.ok) {
-        await load();
-      }
-    } catch (err) {
-      console.error('Purchase failed:', err);
     }
   }
 
-  useEffect(() => {
-    if (!authLoading && token) {
-      load();
+  function purchase() {
+    if (!selected) return;
+    const product = products.find(p => p.id === selected);
+    if (product && !policies.find(p => p.productId === selected)) {
+      setPolicies([...policies, {
+        id: Date.now().toString(),
+        productId: selected,
+        name: product.name,
+        premium: product.premiumBase,
+        coverage: product.coverage,
+        status: 'active'
+      }]);
     }
-  }, [API_URL, token, authLoading]);
+    setSelected('');
+    setQuote(null);
+  }
 
   return (
     <Box p={6}>
@@ -99,125 +67,95 @@ export default function Insurance() {
                 <Badge colorScheme="green" mt={2}>${p.premiumBase}/mo</Badge>
               </CardHeader>
               <CardBody>
-                <Text fontSize="xl" fontWeight="bold" color="blue.600">${p.coverage.toLocaleString()}</Text>
-                <Text fontSize="sm" color="gray.600">Coverage Amount</Text>
+                <Text fontSize="sm" color="gray.600">Coverage: ${p.coverage.toLocaleString()}</Text>
+                <Badge mt={2} colorScheme="blue">{p.tier}</Badge>
               </CardBody>
             </Card>
           ))}
         </SimpleGrid>
-        
-        <Card mb={4} bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="xl" border="1px solid rgba(255,255,255,0.5)">
-          <CardBody>
-            <HStack>
-              <Select placeholder="Or select from dropdown" value={selected} onChange={e => setSelected(e.target.value)} flex={1}>
-                {products.map(p => <option key={p.id} value={p.id}>{p.name} - coverage ${p.coverage}</option>)}
-              </Select>
-              <Button onClick={getQuote} isDisabled={!selected} colorScheme="blue">Get Quote</Button>
-              <Button onClick={purchase} isDisabled={!selected} colorScheme="green">Purchase</Button>
-            </HStack>
-            {quote && (
-              <Box mt={4} p={4} bgGradient="linear(to-r, blue.100, purple.100)" borderRadius="md">
-                <Text fontWeight="bold">Your Quote:</Text>
-                <Text fontSize="2xl" color="blue.600">${quote.monthlyPremium.toLocaleString()}/month</Text>
-              </Box>
-            )}
-          </CardBody>
-        </Card>
 
-        {my.policies.length > 0 && (
-          <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="xl" border="1px solid rgba(255,255,255,0.5)">
+        {selected && (
+          <Card mb={8} bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="xl">
             <CardHeader>
-              <Heading size="sm">My Policies & Claims</Heading>
+              <Heading size="md">Get Quote</Heading>
             </CardHeader>
             <CardBody>
-              <VStack align="stretch" spacing={3}>
-                {my.policies.map((policy) => {
-                  const product = products.find(p => p.id === policy.productId);
-                  return (
-                    <Box key={policy.id} p={3} bgGradient="linear(to-r, blue.50, purple.50)" borderRadius="md">
-                      <HStack justify="space-between">
-                        <Box>
-                          <Text fontWeight="bold">{product?.name || 'Policy'}</Text>
-                          <Badge colorScheme="green">{policy.status}</Badge>
-                        </Box>
-                      </HStack>
-                    </Box>
-                  );
-                })}
+              <VStack align="stretch" spacing={4}>
+                <Button onClick={getQuote} colorScheme="blue">Get Quote</Button>
+                {quote && (
+                  <Box p={4} bg="blue.50" borderRadius="md">
+                    <HStack justify="space-between" mb={2}>
+                      <Text fontWeight="bold">Monthly Premium:</Text>
+                      <Text fontSize="xl">${quote.monthly}</Text>
+                    </HStack>
+                    <HStack justify="space-between">
+                      <Text fontWeight="bold">Coverage:</Text>
+                      <Text>${quote.coverage.toLocaleString()}</Text>
+                    </HStack>
+                  </Box>
+                )}
+                <Button onClick={purchase} colorScheme="green">Purchase Policy</Button>
               </VStack>
             </CardBody>
           </Card>
         )}
       </Box>
 
-      <Divider my={8} />
+      {policies.length > 0 && (
+        <Box mb={10}>
+          <Heading size="md" mb={4}>My Policies</Heading>
+          <SimpleGrid columns={[1, 2, 3]} gap={6}>
+            {policies.map((p) => (
+              <Card key={p.id} bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="xl">
+                <CardHeader>
+                  <HStack>
+                    <CheckCircleIcon color="green.500" />
+                    <Heading size="sm">{p.name}</Heading>
+                  </HStack>
+                </CardHeader>
+                <CardBody>
+                  <VStack align="stretch" spacing={2}>
+                    <HStack justify="space-between">
+                      <Text fontSize="sm">Premium:</Text>
+                      <Text fontWeight="bold">${p.premium}/mo</Text>
+                    </HStack>
+                    <HStack justify="space-between">
+                      <Text fontSize="sm">Coverage:</Text>
+                      <Text>${p.coverage.toLocaleString()}</Text>
+                    </HStack>
+                    <Badge colorScheme="green">{p.status}</Badge>
+                  </VStack>
+                </CardBody>
+              </Card>
+            ))}
+          </SimpleGrid>
+        </Box>
+      )}
 
       <Box>
         <Heading size="md" mb={4}>P2P Insurance Communities</Heading>
-        <SimpleGrid columns={[1, 2]} gap={6} mb={6}>
-          <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="xl" border="1px solid rgba(255,255,255,0.5)">
-            <CardHeader>
-              <Heading size="sm">Create Community</Heading>
-            </CardHeader>
-            <CardBody>
-              <VStack align="stretch" spacing={3}>
-                <Input placeholder="Community Name" value={newCommunityName} onChange={e => setNewCommunityName(e.target.value)} />
-                <Input placeholder="Monthly Contribution" type="number" value={newCommunityContribution} onChange={e => setNewCommunityContribution(e.target.value)} />
-                <Button onClick={async () => {
-                  await fetch(`${API_URL}/insurance/communities`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ name: newCommunityName, contributionMonthly: Number(newCommunityContribution) }) });
-                  setNewCommunityName('');
-                  await load();
-                }} colorScheme="blue">Create Community</Button>
-              </VStack>
-            </CardBody>
-          </Card>
-
-          <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="xl" border="1px solid rgba(255,255,255,0.5)">
-            <CardHeader>
-              <Heading size="sm">Join or Contribute</Heading>
-            </CardHeader>
-            <CardBody>
-              <VStack align="stretch" spacing={3}>
-                <Select placeholder="Select community" value={selectedCommunity} onChange={e => setSelectedCommunity(e.target.value)}>
-                  {communities.map(c => <option key={c.id} value={c.id}>{c.name} – ${c.contributionMonthly}/mo – {c.members} members</option>)}
-                </Select>
-                <Button onClick={async () => {
-                  if (!selectedCommunity) return;
-                  await fetch(`${API_URL}/insurance/communities/join`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ communityId: selectedCommunity }) });
-                  await load();
-                }} isDisabled={!selectedCommunity} colorScheme="green">Join Community</Button>
-                <Input placeholder="Contribution Amount" type="number" value={contributionAmount} onChange={e => setContributionAmount(e.target.value)} />
-                <Button onClick={async () => {
-                  if (!selectedCommunity) return;
-                  await fetch(`${API_URL}/insurance/communities/contribute`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ communityId: selectedCommunity, amount: Number(contributionAmount) }) });
-                  await load();
-                }} isDisabled={!selectedCommunity}>Contribute</Button>
-              </VStack>
-            </CardBody>
-          </Card>
-        </SimpleGrid>
-
-        {notifications.length > 0 && (
-          <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="xl" border="1px solid rgba(255,255,255,0.5)">
-            <CardHeader>
-              <HStack>
-                <Icon as={BellIcon} color="blue.500" />
-                <Heading size="sm">Notifications</Heading>
-              </HStack>
-            </CardHeader>
-            <CardBody>
-              <VStack align="stretch" spacing={2}>
-                {notifications.map((n) => (
-                  <HStack key={n.id} p={3} bgGradient="linear(to-r, blue.50, purple.50)" borderRadius="md">
-                    <Icon as={CheckCircleIcon} color="green.500" />
-                    <Text flex={1}>{n.message}</Text>
-                    <Badge>{new Date(n.ts).toLocaleDateString()}</Badge>
+        <SimpleGrid columns={[1, 2, 3]} gap={6}>
+          {communities.map((c) => (
+            <Card key={c.id} bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="xl">
+              <CardHeader>
+                <Heading size="sm">{c.name}</Heading>
+              </CardHeader>
+              <CardBody>
+                <VStack align="stretch" spacing={2}>
+                  <HStack justify="space-between">
+                    <Text fontSize="sm">Monthly Contribution:</Text>
+                    <Text fontWeight="bold">${c.contributionMonthly}</Text>
                   </HStack>
-                ))}
-              </VStack>
-            </CardBody>
-          </Card>
-        )}
+                  <HStack justify="space-between">
+                    <Text fontSize="sm">Members:</Text>
+                    <Text>{c.members}</Text>
+                  </HStack>
+                  <Button size="sm" colorScheme="blue" mt={2}>Join Community</Button>
+                </VStack>
+              </CardBody>
+            </Card>
+          ))}
+        </SimpleGrid>
       </Box>
     </Box>
   );

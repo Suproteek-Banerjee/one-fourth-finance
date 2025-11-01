@@ -1,123 +1,136 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Heading, Card, CardBody, CardHeader, SimpleGrid, Text, Input, Button, Select, VStack, HStack, Badge, Table, Thead, Tbody, Tr, Th, Td, Stat, StatLabel, StatNumber, StatHelpText, useToast, Icon, Tabs, TabList, TabPanels, Tab, TabPanel, Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton, useDisclosure } from '@chakra-ui/react';
-import { useAuth } from '../context/AuthContext.jsx';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 import { ArrowUpIcon, ArrowDownIcon } from '@chakra-ui/icons';
 
+// Mock data - no API calls
+const MOCK_OPTIONS = {
+  stocks: [
+    { symbol: 'AAPL', name: 'Apple Inc.', price: 175, change24h: 2.5 },
+    { symbol: 'MSFT', name: 'Microsoft Corp.', price: 380, change24h: 1.8 },
+    { symbol: 'GOOGL', name: 'Alphabet Inc.', price: 140, change24h: -0.5 },
+    { symbol: 'AMZN', name: 'Amazon.com Inc.', price: 145, change24h: 3.2 },
+    { symbol: 'TSLA', name: 'Tesla Inc.', price: 250, change24h: 5.1 },
+    { symbol: 'NVDA', name: 'NVIDIA Corp.', price: 480, change24h: 8.3 },
+    { symbol: 'META', name: 'Meta Platforms', price: 320, change24h: 4.7 },
+    { symbol: 'NFLX', name: 'Netflix Inc.', price: 450, change24h: -2.1 },
+    { symbol: 'JPM', name: 'JPMorgan Chase', price: 150, change24h: 1.2 },
+    { symbol: 'BAC', name: 'Bank of America', price: 35, change24h: 0.8 }
+  ],
+  bonds: [
+    { symbol: 'US10Y', name: 'US 10-Year Treasury', yield: 0.045, maturity: '10Y', risk: 'low' },
+    { symbol: 'US30Y', name: 'US 30-Year Treasury', yield: 0.05, maturity: '30Y', risk: 'low' },
+    { symbol: 'CORPORATE', name: 'Corporate Bond Fund', yield: 0.07, maturity: '5Y', risk: 'medium' },
+    { symbol: 'MUNI', name: 'Municipal Bond Fund', yield: 0.04, maturity: '10Y', risk: 'low' }
+  ],
+  crypto: [
+    { symbol: 'BTC', name: 'Bitcoin', price: 45000, change24h: 2.3 },
+    { symbol: 'ETH', name: 'Ethereum', price: 2500, change24h: -1.5 },
+    { symbol: 'SOL', name: 'Solana', price: 100, change24h: 5.8 },
+    { symbol: 'ADA', name: 'Cardano', price: 0.55, change24h: -0.2 },
+    { symbol: 'MATIC', name: 'Polygon', price: 0.85, change24h: 3.1 },
+    { symbol: 'DOT', name: 'Polkadot', price: 7.2, change24h: 4.2 }
+  ]
+};
+
+const MOCK_INVESTMENTS = [
+  { id: '1', type: 'stock', symbol: 'AAPL', shares: 5, avgPrice: 150, currentPrice: 175, ts: Date.now() - 86400000 },
+  { id: '2', type: 'stock', symbol: 'MSFT', shares: 3, avgPrice: 300, currentPrice: 380, ts: Date.now() - 86400000 },
+  { id: '3', type: 'bond', symbol: 'US10Y', amount: 5000, yield: 0.045, ts: Date.now() - 172800000 },
+  { id: '4', type: 'crypto', symbol: 'BTC', amount: 0.05, avgPrice: 45000, currentPrice: 45000, ts: Date.now() - 259200000 }
+];
+
 export default function Investments() {
-  const { API_URL, token, loading: authLoading } = useAuth();
   const toast = useToast();
-  const [options, setOptions] = useState({ stocks: [], bonds: [], crypto: [] });
-  const [investments, setInvestments] = useState([]);
+  const [options] = useState(MOCK_OPTIONS);
+  const [investments, setInvestments] = useState(MOCK_INVESTMENTS);
   const [selectedType, setSelectedType] = useState('stock');
   const [selectedSymbol, setSelectedSymbol] = useState('');
   const [amount, setAmount] = useState('');
-  const [loading, setLoading] = useState(false);
   const [sellId, setSellId] = useState(null);
   const [sellAmount, setSellAmount] = useState('');
   const { isOpen, onOpen, onClose } = useDisclosure();
 
-  async function load() {
-    try {
-      // Load options first (doesn't require auth)
-      const opts = await fetch(`${API_URL}/investments/options`);
-      if (opts.ok) {
-        const optionsData = await opts.json();
-        setOptions(optionsData || { stocks: [], bonds: [], crypto: [] });
-      } else {
-        console.error('Failed to load investment options');
-        // Set empty options as fallback
-        setOptions({ stocks: [], bonds: [], crypto: [] });
-      }
-      
-      // Load user investments (requires auth)
-      if (token) {
-        const invs = await fetch(`${API_URL}/investments`, { headers: { Authorization: `Bearer ${token}` } });
-        if (invs.ok) {
-          const data = await invs.json();
-          setInvestments(data.investments || []);
-        }
-      }
-    } catch (err) {
-      console.error('Failed to load investments:', err);
-      // Set empty options as fallback
-      setOptions({ stocks: [], bonds: [], crypto: [] });
-    }
-  }
-
-  async function buy() {
-    if (!token) {
-      toast({ title: 'Please wait for authentication', status: 'warning' });
-      return;
-    }
+  function buy() {
     if (!selectedSymbol || !amount) {
       toast({ title: 'Please select an asset and enter amount/shares', status: 'warning' });
       return;
     }
     
-    setLoading(true);
-    try {
-      const body = selectedType === 'stock' 
-        ? { type: selectedType, symbol: selectedSymbol, shares: Number(amount) }
-        : selectedType === 'bond'
-        ? { type: selectedType, symbol: selectedSymbol, amount: Number(amount) }
-        : { type: selectedType, symbol: selectedSymbol, amount: Number(amount) };
-      
-      const res = await fetch(`${API_URL}/investments/buy`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(body)
-      });
-      
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: 'Purchase failed' }));
-        throw new Error(errorData.error || 'Purchase failed');
-      }
-      
-      toast({ title: 'Purchase successful!', status: 'success', description: `Bought ${selectedType === 'stock' ? amount + ' shares' : amount + ' ' + selectedSymbol}` });
-      await load();
-      setAmount('');
-      setSelectedSymbol('');
-    } catch (err) {
-      toast({ title: 'Purchase failed', status: 'error', description: err.message || 'Please try again' });
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function sell() {
-    if (!token) {
-      toast({ title: 'Please wait for authentication', status: 'warning' });
+    const option = options[selectedType + 's'].find(opt => opt.symbol === selectedSymbol);
+    if (!option) {
+      toast({ title: 'Invalid selection', status: 'error' });
       return;
     }
+
+    const newInvestment = {
+      id: Date.now().toString(),
+      type: selectedType,
+      symbol: selectedSymbol,
+      ts: Date.now()
+    };
+
+    if (selectedType === 'stock') {
+      newInvestment.shares = Number(amount);
+      newInvestment.avgPrice = option.price;
+      newInvestment.currentPrice = option.price;
+    } else if (selectedType === 'bond') {
+      newInvestment.amount = Number(amount);
+      newInvestment.yield = option.yield;
+    } else {
+      newInvestment.amount = Number(amount);
+      newInvestment.avgPrice = option.price;
+      newInvestment.currentPrice = option.price;
+    }
+
+    setInvestments([...investments, newInvestment]);
+    toast({ title: 'Purchase successful!', status: 'success', description: `Bought ${selectedType === 'stock' ? amount + ' shares' : amount + ' ' + selectedSymbol}` });
+    setAmount('');
+    setSelectedSymbol('');
+  }
+
+  function sell() {
     if (!sellAmount || !sellId) {
       toast({ title: 'Please enter amount/shares to sell', status: 'warning' });
       return;
     }
     
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_URL}/investments/sell/${sellId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(selectedType === 'stock' ? { shares: Number(sellAmount) } : { amount: Number(sellAmount) })
-      });
-      
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: 'Sale failed' }));
-        throw new Error(errorData.error || 'Sale failed');
-      }
-      
-      toast({ title: 'Sale successful!', status: 'success' });
-      await load();
-      onClose();
-      setSellAmount('');
-      setSellId(null);
-    } catch (err) {
-      toast({ title: 'Sale failed', status: 'error', description: err.message || 'Please try again' });
-    } finally {
-      setLoading(false);
+    const investment = investments.find(inv => inv.id === sellId);
+    if (!investment) {
+      toast({ title: 'Investment not found', status: 'error' });
+      return;
     }
+
+    if (investment.type === 'stock') {
+      if (Number(sellAmount) > investment.shares) {
+        toast({ title: 'Not enough shares', status: 'error' });
+        return;
+      }
+      if (Number(sellAmount) === investment.shares) {
+        setInvestments(investments.filter(inv => inv.id !== sellId));
+      } else {
+        setInvestments(investments.map(inv => 
+          inv.id === sellId ? { ...inv, shares: inv.shares - Number(sellAmount) } : inv
+        ));
+      }
+    } else {
+      if (Number(sellAmount) > investment.amount) {
+        toast({ title: 'Not enough amount', status: 'error' });
+        return;
+      }
+      if (Number(sellAmount) === investment.amount) {
+        setInvestments(investments.filter(inv => inv.id !== sellId));
+      } else {
+        setInvestments(investments.map(inv => 
+          inv.id === sellId ? { ...inv, amount: inv.amount - Number(sellAmount) } : inv
+        ));
+      }
+    }
+
+    toast({ title: 'Sale successful!', status: 'success' });
+    onClose();
+    setSellAmount('');
+    setSellId(null);
   }
 
   function openSellModal(inv) {
@@ -125,13 +138,6 @@ export default function Investments() {
     setSelectedType(inv.type);
     onOpen();
   }
-
-  useEffect(() => {
-    // Load options immediately (no auth needed), investments when token is available
-    if (!authLoading) {
-      load();
-    }
-  }, [API_URL, token, authLoading]);
 
   const totalValue = investments.reduce((sum, inv) => {
     if (inv.type === 'stock') return sum + (inv.shares * inv.currentPrice);
@@ -192,7 +198,7 @@ export default function Investments() {
             <Stat>
               <StatLabel color="gray.600">Return %</StatLabel>
               <StatNumber fontSize="2xl" color={totalGain >= 0 ? 'green.500' : 'red.500'}>
-                {((totalGain / totalCost) * 100).toFixed(2)}%
+                {totalCost > 0 ? ((totalGain / totalCost) * 100).toFixed(2) : '0.00'}%
               </StatNumber>
               <StatHelpText color="gray.600">Performance</StatHelpText>
             </Stat>
@@ -238,14 +244,14 @@ export default function Investments() {
                 <CardBody>
                   <VStack align="stretch" spacing={3}>
                     <Select value={selectedSymbol} onChange={e => setSelectedSymbol(e.target.value)} placeholder="Select stock">
-                      {(options.stocks || []).map(opt => (
+                      {options.stocks.map(opt => (
                         <option key={opt.symbol} value={opt.symbol}>
                           {opt.name} ({opt.symbol}) - ${opt.price} {opt.change24h >= 0 ? '+' : ''}{opt.change24h}%
                         </option>
                       ))}
                     </Select>
                     <Input type="number" placeholder="Number of shares" value={amount} onChange={e => setAmount(e.target.value)} />
-                    <Button onClick={buy} isLoading={loading} colorScheme="blue" leftIcon={<Icon as={ArrowUpIcon} />}>
+                    <Button onClick={buy} colorScheme="blue" leftIcon={<Icon as={ArrowUpIcon} />}>
                       Buy Stock
                     </Button>
                   </VStack>
@@ -258,30 +264,30 @@ export default function Investments() {
                 </CardHeader>
                 <CardBody>
                   {investments.filter(inv => inv.type === 'stock').length > 0 ? (
-                    <Table variant="simple" size="sm">
+                    <Table size="sm">
                       <Thead>
                         <Tr>
                           <Th>Symbol</Th>
                           <Th>Shares</Th>
                           <Th>Avg Price</Th>
                           <Th>Current</Th>
-                          <Th>Gain</Th>
+                          <Th>Value</Th>
                           <Th>Action</Th>
                         </Tr>
                       </Thead>
                       <Tbody>
                         {investments.filter(inv => inv.type === 'stock').map(inv => {
-                          const gain = (inv.currentPrice - inv.avgPrice) * inv.shares;
-                          const gainPct = ((inv.currentPrice - inv.avgPrice) / inv.avgPrice * 100);
+                          const option = options.stocks.find(o => o.symbol === inv.symbol);
+                          const currentPrice = option?.price || inv.currentPrice;
+                          const value = inv.shares * currentPrice;
+                          const gain = value - (inv.shares * inv.avgPrice);
                           return (
                             <Tr key={inv.id}>
-                              <Td><Badge fontSize="md">{inv.symbol}</Badge></Td>
+                              <Td fontWeight="bold">{inv.symbol}</Td>
                               <Td>{inv.shares}</Td>
-                              <Td>${inv.avgPrice}</Td>
-                              <Td>${inv.currentPrice}</Td>
-                              <Td color={gain >= 0 ? 'green.500' : 'red.500'}>
-                                ${gain.toFixed(2)} ({gainPct.toFixed(2)}%)
-                              </Td>
+                              <Td>${inv.avgPrice.toFixed(2)}</Td>
+                              <Td>${currentPrice.toFixed(2)}</Td>
+                              <Td color={gain >= 0 ? 'green.500' : 'red.500'}>${value.toFixed(2)}</Td>
                               <Td><Button size="sm" onClick={() => openSellModal(inv)} colorScheme="red">Sell</Button></Td>
                             </Tr>
                           );
@@ -305,14 +311,14 @@ export default function Investments() {
                 <CardBody>
                   <VStack align="stretch" spacing={3}>
                     <Select value={selectedSymbol} onChange={e => setSelectedSymbol(e.target.value)} placeholder="Select bond">
-                      {(options.bonds || []).map(opt => (
+                      {options.bonds.map(opt => (
                         <option key={opt.symbol} value={opt.symbol}>
                           {opt.name} - {(opt.yield * 100).toFixed(2)}% yield
                         </option>
                       ))}
                     </Select>
                     <Input type="number" placeholder="Amount ($)" value={amount} onChange={e => setAmount(e.target.value)} />
-                    <Button onClick={buy} isLoading={loading} colorScheme="purple" leftIcon={<Icon as={ArrowUpIcon} />}>
+                    <Button onClick={buy} colorScheme="purple" leftIcon={<Icon as={ArrowUpIcon} />}>
                       Buy Bond
                     </Button>
                   </VStack>
@@ -320,12 +326,12 @@ export default function Investments() {
               </Card>
 
               <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="xl" border="1px solid rgba(255,255,255,0.5)">
-                <CardHeader bgGradient="linear(to-r, orange.500, red.500)" color="white" borderRadius="lg">
+                <CardHeader bgGradient="linear(to-r, green.500, teal.500)" color="white" borderRadius="lg">
                   <Heading size="md">My Bond Holdings</Heading>
                 </CardHeader>
                 <CardBody>
                   {investments.filter(inv => inv.type === 'bond').length > 0 ? (
-                    <Table variant="simple" size="sm">
+                    <Table size="sm">
                       <Thead>
                         <Tr>
                           <Th>Symbol</Th>
@@ -337,8 +343,8 @@ export default function Investments() {
                       <Tbody>
                         {investments.filter(inv => inv.type === 'bond').map(inv => (
                           <Tr key={inv.id}>
-                            <Td><Badge fontSize="md">{inv.symbol}</Badge></Td>
-                            <Td>${inv.amount}</Td>
+                            <Td fontWeight="bold">{inv.symbol}</Td>
+                            <Td>${inv.amount.toLocaleString()}</Td>
                             <Td>{(inv.yield * 100).toFixed(2)}%</Td>
                             <Td><Button size="sm" onClick={() => openSellModal(inv)} colorScheme="red">Sell</Button></Td>
                           </Tr>
@@ -362,14 +368,14 @@ export default function Investments() {
                 <CardBody>
                   <VStack align="stretch" spacing={3}>
                     <Select value={selectedSymbol} onChange={e => setSelectedSymbol(e.target.value)} placeholder="Select crypto">
-                      {(options.crypto || []).map(opt => (
+                      {options.crypto.map(opt => (
                         <option key={opt.symbol} value={opt.symbol}>
                           {opt.name} ({opt.symbol}) - ${opt.price.toLocaleString()} {opt.change24h >= 0 ? '+' : ''}{opt.change24h}%
                         </option>
                       ))}
                     </Select>
                     <Input type="number" placeholder="Amount" value={amount} onChange={e => setAmount(e.target.value)} />
-                    <Button onClick={buy} isLoading={loading} colorScheme="orange" leftIcon={<Icon as={ArrowUpIcon} />}>
+                    <Button onClick={buy} colorScheme="orange" leftIcon={<Icon as={ArrowUpIcon} />}>
                       Buy Crypto
                     </Button>
                   </VStack>
@@ -377,35 +383,35 @@ export default function Investments() {
               </Card>
 
               <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="xl" border="1px solid rgba(255,255,255,0.5)">
-                <CardHeader bgGradient="linear(to-r, teal.500, cyan.500)" color="white" borderRadius="lg">
+                <CardHeader bgGradient="linear(to-r, green.500, teal.500)" color="white" borderRadius="lg">
                   <Heading size="md">My Crypto Holdings</Heading>
                 </CardHeader>
                 <CardBody>
                   {investments.filter(inv => inv.type === 'crypto').length > 0 ? (
-                    <Table variant="simple" size="sm">
+                    <Table size="sm">
                       <Thead>
                         <Tr>
                           <Th>Symbol</Th>
                           <Th>Amount</Th>
                           <Th>Avg Price</Th>
                           <Th>Current</Th>
-                          <Th>Gain</Th>
+                          <Th>Value</Th>
                           <Th>Action</Th>
                         </Tr>
                       </Thead>
                       <Tbody>
                         {investments.filter(inv => inv.type === 'crypto').map(inv => {
-                          const gain = (inv.currentPrice - inv.avgPrice) * inv.amount;
-                          const gainPct = ((inv.currentPrice - inv.avgPrice) / inv.avgPrice * 100);
+                          const option = options.crypto.find(o => o.symbol === inv.symbol);
+                          const currentPrice = option?.price || inv.currentPrice;
+                          const value = inv.amount * currentPrice;
+                          const gain = value - (inv.amount * inv.avgPrice);
                           return (
                             <Tr key={inv.id}>
-                              <Td><Badge fontSize="md">{inv.symbol}</Badge></Td>
+                              <Td fontWeight="bold">{inv.symbol}</Td>
                               <Td>{inv.amount}</Td>
-                              <Td>${inv.avgPrice}</Td>
-                              <Td>${inv.currentPrice}</Td>
-                              <Td color={gain >= 0 ? 'green.500' : 'red.500'}>
-                                ${gain.toFixed(2)} ({gainPct.toFixed(2)}%)
-                              </Td>
+                              <Td>${inv.avgPrice.toLocaleString()}</Td>
+                              <Td>${currentPrice.toLocaleString()}</Td>
+                              <Td color={gain >= 0 ? 'green.500' : 'red.500'}>${value.toFixed(2)}</Td>
                               <Td><Button size="sm" onClick={() => openSellModal(inv)} colorScheme="red">Sell</Button></Td>
                             </Tr>
                           );
@@ -425,26 +431,24 @@ export default function Investments() {
       <Modal isOpen={isOpen} onClose={onClose}>
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>Sell {selectedType.charAt(0).toUpperCase() + selectedType.slice(1)}</ModalHeader>
+          <ModalHeader>Sell {selectedType === 'stock' ? 'Stock' : selectedType === 'bond' ? 'Bond' : 'Crypto'}</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             <VStack align="stretch" spacing={4}>
-              <Text>{selectedType === 'stock' ? 'Number of shares to sell:' : 'Amount to sell:'}</Text>
               <Input 
                 type="number" 
-                placeholder={selectedType === 'stock' ? 'Shares' : 'Amount'} 
+                placeholder={selectedType === 'stock' ? 'Number of shares' : 'Amount'} 
                 value={sellAmount} 
                 onChange={e => setSellAmount(e.target.value)} 
               />
             </VStack>
           </ModalBody>
           <ModalFooter>
-            <Button onClick={onClose} mr={3}>Cancel</Button>
-            <Button onClick={sell} isLoading={loading} colorScheme="red">Sell</Button>
+            <Button variant="ghost" mr={3} onClick={onClose}>Cancel</Button>
+            <Button colorScheme="red" onClick={sell}>Sell</Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
     </Box>
   );
 }
-
