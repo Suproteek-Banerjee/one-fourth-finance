@@ -1,24 +1,52 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Button, Heading, Input, Text, Card, CardBody, CardHeader, SimpleGrid, VStack, HStack, Badge, useToast } from '@chakra-ui/react';
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 
 // Mock data - no API calls
 const MOCK_PROPERTIES = [
   { id: '1', title: 'Nairobi Apartments', price: 250000, roi: 0.11, tokensTotal: 100000, tokensAvailable: 75000 },
   { id: '2', title: 'Lagos Co-working', price: 450000, roi: 0.13, tokensTotal: 150000, tokensAvailable: 120000 },
-  { id: '3', title: 'Bangalore Retail', price: 600000, roi: 0.09, tokensTotal: 200000, tokensAvailable: 180000 }
+  { id: '3', title: 'Bangalore Retail', price: 600000, roi: 0.09, tokensTotal: 200000, tokensAvailable: 180000 },
+  { id: '4', title: 'Cape Town Residences', price: 350000, roi: 0.12, tokensTotal: 125000, tokensAvailable: 95000 },
+  { id: '5', title: 'Mumbai Office Complex', price: 750000, roi: 0.10, tokensTotal: 250000, tokensAvailable: 220000 },
+  { id: '6', title: 'Dubai Luxury Condos', price: 850000, roi: 0.14, tokensTotal: 280000, tokensAvailable: 250000 }
 ];
 
-const MOCK_HOLDINGS = [
-  { id: '1', propertyId: '1', tokens: 5000, property: MOCK_PROPERTIES[0] },
-  { id: '2', propertyId: '2', tokens: 10000, property: MOCK_PROPERTIES[1] }
-];
+// Get real estate holdings from localStorage
+const getStoredRealEstate = () => {
+  try {
+    const stored = localStorage.getItem('off_realestate');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      // Map property IDs back to full property objects
+      return parsed.map(holding => ({
+        ...holding,
+        property: MOCK_PROPERTIES.find(p => p.id === holding.propertyId)
+      }));
+    }
+  } catch (e) {}
+  return [];
+};
 
 export default function RealEstate() {
   const toast = useToast();
   const [properties, setProperties] = useState(MOCK_PROPERTIES);
-  const [holdings, setHoldings] = useState(MOCK_HOLDINGS);
+  const [holdings, setHoldings] = useState(getStoredRealEstate());
   const [selected, setSelected] = useState('');
   const [tokens, setTokens] = useState(100);
+
+  // Load holdings from localStorage on mount and listen for changes
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setHoldings(getStoredRealEstate());
+    };
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('realEstateUpdated', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('realEstateUpdated', handleStorageChange);
+    };
+  }, []);
 
   function purchase() {
     if (!selected || !tokens || tokens <= 0) {
@@ -43,20 +71,35 @@ export default function RealEstate() {
     ));
 
     // Add to holdings
+    let updatedHoldings;
     const existingHolding = holdings.find(h => h.propertyId === selected);
     if (existingHolding) {
-      setHoldings(holdings.map(h => 
+      updatedHoldings = holdings.map(h => 
         h.propertyId === selected ? { ...h, tokens: h.tokens + tokens } : h
-      ));
+      );
     } else {
-      setHoldings([...holdings, {
+      updatedHoldings = [...holdings, {
         id: Date.now().toString(),
         propertyId: selected,
-        tokens: tokens,
-        property: property
-      }]);
+        tokens: Number(tokens),
+        ts: Date.now()
+      }];
     }
 
+    setHoldings(updatedHoldings);
+    
+    // Save to localStorage (without circular reference to property object)
+    const holdingsToSave = updatedHoldings.map(h => ({
+      id: h.id,
+      propertyId: h.propertyId,
+      tokens: h.tokens,
+      ts: h.ts
+    }));
+    localStorage.setItem('off_realestate', JSON.stringify(holdingsToSave));
+    
+    // Dispatch event to notify Dashboard
+    window.dispatchEvent(new Event('realEstateUpdated'));
+    
     toast({ title: 'Purchase successful!', status: 'success', description: `Purchased ${tokens} tokens` });
     setTokens(100);
     setSelected('');
@@ -118,32 +161,119 @@ export default function RealEstate() {
       </Card>
 
       {holdings.length > 0 && (
-        <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="xl" border="1px solid rgba(255,255,255,0.5)">
-          <CardHeader>
-            <Heading size="md">My Real Estate Holdings</Heading>
-          </CardHeader>
-          <CardBody>
-            <VStack align="stretch" spacing={4}>
-              {holdings.map((holding) => (
-                <Card key={holding.id}>
-                  <CardBody>
-                    <HStack justify="space-between">
-                      <Box>
-                        <Text fontWeight="bold" fontSize="lg">{holding.property?.title || 'Property'}</Text>
-                        <Text fontSize="sm" color="gray.600">Tokens Owned: {holding.tokens.toLocaleString()}</Text>
+        <SimpleGrid columns={[1, 2]} gap={6}>
+          <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="xl" border="1px solid rgba(255,255,255,0.5)">
+            <CardHeader>
+              <Heading size="md">My Real Estate Holdings</Heading>
+            </CardHeader>
+            <CardBody>
+              <VStack align="stretch" spacing={4}>
+                {holdings.map((holding) => {
+                  const property = MOCK_PROPERTIES.find(p => p.id === holding.propertyId);
+                  if (!property) return null;
+                  const investmentValue = (holding.tokens / property.tokensTotal) * property.price;
+                  return (
+                    <Card key={holding.id}>
+                      <CardBody>
+                        <HStack justify="space-between">
+                          <Box>
+                            <Text fontWeight="bold" fontSize="lg">{property.title}</Text>
+                            <Text fontSize="sm" color="gray.600">Tokens Owned: {holding.tokens.toLocaleString()}</Text>
+                            <Text fontSize="sm" color="blue.600" fontWeight="medium">Value: ${investmentValue.toLocaleString()}</Text>
+                          </Box>
+                          <Badge colorScheme="green" fontSize="md" px={4} py={2}>
+                            {Math.round(property.roi * 100)}% ROI
+                          </Badge>
+                        </HStack>
+                      </CardBody>
+                    </Card>
+                  );
+                })}
+              </VStack>
+            </CardBody>
+          </Card>
+
+          <Card bg="white" backdropFilter="blur(20px)" bgColor="rgba(255,255,255,0.8)" boxShadow="xl" border="1px solid rgba(255,255,255,0.5)">
+            <CardHeader>
+              <Heading size="md">Real Estate Allocation</Heading>
+            </CardHeader>
+            <CardBody>
+              {(() => {
+                // Calculate pie chart data
+                const pieData = holdings.map((holding) => {
+                  const property = MOCK_PROPERTIES.find(p => p.id === holding.propertyId);
+                  if (!property) return null;
+                  const investmentValue = (holding.tokens / property.tokensTotal) * property.price;
+                  return {
+                    name: property.title,
+                    value: investmentValue,
+                    tokens: holding.tokens,
+                    color: property.id === '1' ? '#0088FE' : 
+                           property.id === '2' ? '#00C49F' : 
+                           property.id === '3' ? '#FFBB28' : 
+                           property.id === '4' ? '#FF8042' : 
+                           property.id === '5' ? '#8884d8' : '#82ca9d'
+                  };
+                }).filter(item => item !== null);
+
+                const totalValue = pieData.reduce((sum, item) => sum + item.value, 0);
+
+                // Custom tooltip
+                const CustomTooltip = ({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    const data = payload[0].payload;
+                    const percentage = totalValue > 0 ? ((data.value / totalValue) * 100).toFixed(1) : 0;
+                    return (
+                      <Box bg="white" p={3} border="1px solid" borderColor="gray.200" borderRadius="md" boxShadow="lg">
+                        <Text fontWeight="bold" mb={1}>{data.name}</Text>
+                        <Text fontSize="sm" color="gray.600">Value: ${data.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+                        <Text fontSize="sm" color="gray.600">Percentage: {percentage}%</Text>
+                        <Text fontSize="sm" color="gray.600">Tokens: {data.tokens.toLocaleString()}</Text>
                       </Box>
-                      {holding.property && (
-                        <Badge colorScheme="green" fontSize="md" px={4} py={2}>
-                          {Math.round(holding.property.roi * 100)}% ROI
-                        </Badge>
-                      )}
-                    </HStack>
-                  </CardBody>
-                </Card>
-              ))}
-            </VStack>
-          </CardBody>
-        </Card>
+                    );
+                  }
+                  return null;
+                };
+
+                // Custom label function
+                const renderLabel = (entry) => {
+                  const percentage = totalValue > 0 ? ((entry.value / totalValue) * 100).toFixed(1) : 0;
+                  return `${percentage}%`;
+                };
+
+                if (pieData.length > 0) {
+                  return (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <PieChart>
+                        <Pie 
+                          data={pieData} 
+                          cx="50%" 
+                          cy="50%" 
+                          outerRadius={100} 
+                          fill="#8884d8" 
+                          dataKey="value" 
+                          label={renderLabel}
+                        >
+                          {pieData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<CustomTooltip />} />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  );
+                } else {
+                  return (
+                    <Box textAlign="center" py={8}>
+                      <Text color="gray.500">No holdings to display</Text>
+                    </Box>
+                  );
+                }
+              })()}
+            </CardBody>
+          </Card>
+        </SimpleGrid>
       )}
     </Box>
   );

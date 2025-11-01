@@ -26,6 +26,16 @@ const MOCK_DATA = {
   ]
 };
 
+// Real estate properties (matching RealEstate page)
+const REAL_ESTATE_PROPERTIES = [
+  { id: '1', title: 'Nairobi Apartments', price: 250000, roi: 0.11, tokensTotal: 100000, tokensAvailable: 75000 },
+  { id: '2', title: 'Lagos Co-working', price: 450000, roi: 0.13, tokensTotal: 150000, tokensAvailable: 120000 },
+  { id: '3', title: 'Bangalore Retail', price: 600000, roi: 0.09, tokensTotal: 200000, tokensAvailable: 180000 },
+  { id: '4', title: 'Cape Town Residences', price: 350000, roi: 0.12, tokensTotal: 125000, tokensAvailable: 95000 },
+  { id: '5', title: 'Mumbai Office Complex', price: 750000, roi: 0.10, tokensTotal: 250000, tokensAvailable: 220000 },
+  { id: '6', title: 'Dubai Luxury Condos', price: 850000, roi: 0.14, tokensTotal: 280000, tokensAvailable: 250000 }
+];
+
 // Get investments from localStorage (shared with Investments page)
 const getStoredInvestments = () => {
   try {
@@ -39,6 +49,15 @@ const getStoredInvestments = () => {
     { id: '3', type: 'bond', symbol: 'US10Y', amount: 5000, yield: 0.045 },
     { id: '4', type: 'crypto', symbol: 'BTC', amount: 0.05, avgPrice: 45000, currentPrice: 45000 }
   ];
+};
+
+// Get real estate holdings from localStorage
+const getStoredRealEstate = () => {
+  try {
+    const stored = localStorage.getItem('off_realestate');
+    if (stored) return JSON.parse(stored);
+  } catch (e) {}
+  return [];
 };
 
 export default function Dashboard() {
@@ -81,6 +100,13 @@ export default function Dashboard() {
     setInvestments(updated);
   }, [location.pathname, refreshKey]);
   
+  // Get real estate holdings
+  const [realEstateHoldings, setRealEstateHoldings] = useState([]);
+  
+  useEffect(() => {
+    setRealEstateHoldings(getStoredRealEstate());
+  }, [refreshKey]);
+
   // Listen for storage changes (when investments are updated)
   useEffect(() => {
     const handleStorageChange = () => {
@@ -89,9 +115,11 @@ export default function Dashboard() {
     window.addEventListener('storage', handleStorageChange);
     // Also listen for custom event (for same-window updates)
     window.addEventListener('investmentUpdated', handleStorageChange);
+    window.addEventListener('realEstateUpdated', handleStorageChange);
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('investmentUpdated', handleStorageChange);
+      window.removeEventListener('realEstateUpdated', handleStorageChange);
     };
   }, []);
   const portfolioValue = MOCK_DATA.portfolio.value;
@@ -108,9 +136,17 @@ export default function Dashboard() {
     return sum;
   }, 0);
   
-  const totalPortfolioValue = portfolioValue + investmentValue;
+  // Calculate real estate value from holdings
+  const realEstateValue = realEstateHoldings.reduce((sum, holding) => {
+    const property = REAL_ESTATE_PROPERTIES.find(p => p.id === holding.propertyId);
+    if (!property) return sum;
+    const holdingValue = (holding.tokens / property.tokensTotal) * property.price;
+    return sum + holdingValue;
+  }, 0);
   
-  // Calculate allocation from investments
+  const totalPortfolioValue = portfolioValue + investmentValue + realEstateValue;
+  
+  // Calculate allocation from investments and real estate
   const allocation = investments.reduce((acc, inv) => {
     if (!inv || !inv.type) return acc;
     const val = inv.type === 'stock' ? (inv.shares || 0) * (inv.currentPrice || inv.avgPrice || 0) : 
@@ -119,37 +155,18 @@ export default function Dashboard() {
     const key = inv.type === 'stock' ? 'stocks' : inv.type === 'bond' ? 'bonds' : 'crypto';
     acc[key] = (acc[key] || 0) + val;
     return acc;
-  }, { stocks: 0, bonds: 0, crypto: 0 });
+  }, { stocks: 0, bonds: 0, crypto: 0, realEstate: realEstateValue });
   
-  // Get portfolio allocation from mock data
-  const portfolioAllocation = MOCK_DATA.portfolio.allocation;
-  
-  // Combine investment-based allocation with portfolio allocation
+  // Calculate total allocation value including real estate
   const totalAllocationValue = Object.values(allocation).reduce((sum, val) => sum + val, 0);
   
   let allocationPercent = { stocks: 0, bonds: 0, crypto: 0, realEstate: 0 };
-  let realEstateAmount = 0;
   
   if (totalAllocationValue > 0) {
     allocationPercent.stocks = allocation.stocks / totalAllocationValue;
     allocationPercent.bonds = allocation.bonds / totalAllocationValue;
     allocationPercent.crypto = allocation.crypto / totalAllocationValue;
-  } else {
-    allocationPercent = {
-      stocks: portfolioAllocation.stocks || 0,
-      bonds: portfolioAllocation.bonds || 0,
-      crypto: portfolioAllocation.crypto || 0,
-      realEstate: portfolioAllocation.realEstate || 0
-    };
-    // Calculate real estate amount from percentage if we have total value
-    if (totalPortfolioValue > 0 && portfolioAllocation.realEstate) {
-      realEstateAmount = totalPortfolioValue * portfolioAllocation.realEstate;
-    }
-  }
-  
-  // If we have real estate percentage but no amount calculated, calculate from total
-  if (allocationPercent.realEstate > 0 && realEstateAmount === 0 && totalAllocationValue > 0) {
-    realEstateAmount = totalAllocationValue * allocationPercent.realEstate;
+    allocationPercent.realEstate = allocation.realEstate / totalAllocationValue;
   }
   
   // Build pie chart data with dollar amounts
@@ -175,7 +192,7 @@ export default function Dashboard() {
     { 
       name: 'Real Estate', 
       value: Math.round((allocationPercent.realEstate || 0) * 100), 
-      amount: realEstateAmount,
+      amount: allocation.realEstate || 0,
       color: '#FFBB28' 
     }
   ].filter(item => item.value > 0);
