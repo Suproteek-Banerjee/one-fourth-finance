@@ -17,7 +17,12 @@ import walletRoutes from './routes/wallet.js';
 import investmentRoutes from './routes/investments.js';
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: true, // Allow all origins (for development)
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 
 // Seed data in-memory on boot
@@ -41,8 +46,10 @@ app.use('/wallet', walletRoutes);
 app.use('/investments', investmentRoutes);
 
 const port = process.env.PORT || 4000;
-app.listen(port, () => {
-  console.log(`One-Fourth Finance API listening on http://localhost:${port}`);
+const host = process.env.HOST || '0.0.0.0'; // Listen on all interfaces for mobile access
+app.listen(port, host, () => {
+  console.log(`One-Fourth Finance API listening on http://${host === '0.0.0.0' ? 'localhost' : host}:${port}`);
+  console.log(`To access from mobile devices, use your computer's IP address (e.g., http://192.168.1.XXX:${port})`);
 });
 
 

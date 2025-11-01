@@ -56,6 +56,29 @@ Client runs on http://localhost:5173
 - `server/.env` controls API config. Change `JWT_SECRET` for demos.
 - `client` can target a different API via Vite env: create `client/.env` with `VITE_API_URL=http://localhost:4000` (defaults to localhost:4000 if not set).
 
+### Mobile Device Testing
+To test on mobile devices (phones/tablets) on the same network:
+
+1. **Find your computer's local IP address:**
+   - **macOS/Linux**: Run `ifconfig | grep "inet " | grep -v 127.0.0.1` or `ipconfig getifaddr en0` (macOS)
+   - **Windows**: Run `ipconfig` and look for "IPv4 Address" under your active network adapter
+   - Look for an address like `192.168.1.XXX` or `10.0.0.XXX`
+
+2. **Configure the client to use your IP:**
+   - Create `client/.env` file with:
+     ```
+     VITE_API_URL=http://YOUR_IP_ADDRESS:4000
+     ```
+   - Replace `YOUR_IP_ADDRESS` with your actual IP (e.g., `http://192.168.1.100:4000`)
+   - Restart the Vite dev server after creating/modifying `.env`
+
+3. **Access from mobile:**
+   - Make sure your phone is on the same Wi-Fi network as your computer
+   - Open `http://YOUR_IP_ADDRESS:5173` in your phone's browser
+   - The app will now connect to the backend using the configured IP address
+
+**Note**: The server now listens on all network interfaces (0.0.0.0) by default, making it accessible from mobile devices on your local network.
+
 ### Demo Users
 - admin@off.demo / Admin123!
 - investor@off.demo / Investor123!

@@ -19,7 +19,7 @@ export default function Login() {
       await login(email, password);
       nav('/dashboard');
     } catch (err) {
-      setError('Invalid credentials');
+      setError(err.message || 'Invalid credentials. Please try again.');
     } finally {
       setLoading(false);
     }
