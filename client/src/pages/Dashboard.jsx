@@ -18,20 +18,20 @@ export default function Dashboard() {
       return;
     }
     
+    if (!token) {
+      // If no token after auth loads, show empty state
+      setLoading(false);
+      setData({ portfolio: {}, investments: [], loans: [], policies: [], pension: null, alerts: [] });
+      return;
+    }
+    
+    // Load dashboard data
     async function load() {
-      if (!token) {
-        setLoading(false);
-        setData({ portfolio: {}, investments: [], loans: [], policies: [], pension: null, alerts: [] });
-        return;
-      }
-      
-      // Always reload data when navigating to this page
       setLoading(true);
       try {
         const res = await fetch(`${API_URL}/dashboard`, { headers: { Authorization: `Bearer ${token}` } });
         if (!res.ok) {
           console.error('Dashboard API error:', res.status, res.statusText);
-          // Use empty data if API fails
           setData({ portfolio: {}, investments: [], loans: [], policies: [], pension: null, alerts: [] });
         } else {
           const json = await res.json();
@@ -39,14 +39,12 @@ export default function Dashboard() {
         }
       } catch (err) {
         console.error('Dashboard fetch error:', err);
-        // Use empty data if fetch fails
         setData({ portfolio: {}, investments: [], loans: [], policies: [], pension: null, alerts: [] });
       } finally {
         setLoading(false);
       }
     }
     
-    // Load data once auth is ready
     load();
   }, [API_URL, token, authLoading, location.pathname]);
 
@@ -121,10 +119,14 @@ export default function Dashboard() {
     { month: 'May', value: 25000 }
   ];
 
+  // Always show something - never blank
   if (loading || authLoading) {
     return (
-      <Box p={8} display="flex" alignItems="center" justifyContent="center" minH="50vh">
-        <Text fontSize="lg" color="gray.600">Loading dashboard...</Text>
+      <Box p={8}>
+        <Heading mb={2} bgGradient="linear(to-r, blue.600, purple.600)" bgClip="text">Unified Dashboard</Heading>
+        <Box display="flex" alignItems="center" justifyContent="center" minH="50vh">
+          <Text fontSize="lg" color="gray.600">Loading dashboard...</Text>
+        </Box>
       </Box>
     );
   }
