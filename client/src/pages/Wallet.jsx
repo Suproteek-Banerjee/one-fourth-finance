@@ -8,6 +8,7 @@ export default function Wallet() {
   const toast = useToast();
   const [wallet, setWallet] = useState(null);
   const [transactions, setTransactions] = useState([]);
+  const [initialLoad, setInitialLoad] = useState(true);
   // Separate state for each form
   const [depositCurrency, setDepositCurrency] = useState('USDC');
   const [depositAmount, setDepositAmount] = useState('');
@@ -19,11 +20,17 @@ export default function Wallet() {
   const [loading, setLoading] = useState(false);
 
   async function load() {
-    if (!token) return;
+    if (!token) {
+      setInitialLoad(false);
+      return;
+    }
     try {
       const res = await fetch(`${API_URL}/wallet`, { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) {
         setWallet(await res.json());
+      } else {
+        // Set default empty wallet if API fails
+        setWallet({ userId: '', address: '', balances: { USDC: 0, BTC: 0, ETH: 0, SOL: 0, ADA: 0, MATIC: 0, DOT: 0 }, history: [] });
       }
       const txs = await fetch(`${API_URL}/wallet/transactions`, { headers: { Authorization: `Bearer ${token}` } });
       if (txs.ok) {
@@ -31,6 +38,10 @@ export default function Wallet() {
       }
     } catch (err) {
       console.error('Failed to load wallet:', err);
+      // Set default empty wallet on error
+      setWallet({ userId: '', address: '', balances: { USDC: 0, BTC: 0, ETH: 0, SOL: 0, ADA: 0, MATIC: 0, DOT: 0 }, history: [] });
+    } finally {
+      setInitialLoad(false);
     }
   }
 
@@ -99,10 +110,13 @@ export default function Wallet() {
   useEffect(() => {
     if (!authLoading && token) {
       load();
+    } else if (!authLoading && !token) {
+      setInitialLoad(false);
     }
   }, [API_URL, token, authLoading]);
 
-  if (authLoading || !wallet) return <Box p={8}><Text>Loading...</Text></Box>;
+  if (authLoading || initialLoad) return <Box p={8}><Text>Loading...</Text></Box>;
+  if (!wallet) return <Box p={8}><Text>Unable to load wallet</Text></Box>;
 
   const totalValue = (wallet.balances?.USDC || 0) * 1 + 
                      (wallet.balances?.BTC || 0) * 45000 + 
