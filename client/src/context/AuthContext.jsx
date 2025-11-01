@@ -4,16 +4,17 @@ const AuthContext = createContext(null);
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
+  // Default user - auto-login without authentication
+  const defaultUser = { id: 'default-user', email: 'investor@off.demo', role: 'investor', name: 'Default User', eduVerified: false };
+  const defaultToken = 'default-token-no-auth';
+
+  const [user, setUser] = useState(defaultUser);
+  const [token, setToken] = useState(defaultToken);
 
   useEffect(() => {
-    const saved = localStorage.getItem('off_auth');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      setUser(parsed.user);
-      setToken(parsed.token);
-    }
+    // Auto-set default user on mount (no login required)
+    setUser(defaultUser);
+    setToken(defaultToken);
   }, []);
 
   function saveAuth(u, t) {

@@ -3,8 +3,6 @@ import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { Box, Flex, Heading, Button, Spacer, IconButton, Drawer, DrawerBody, DrawerHeader, DrawerOverlay, DrawerContent, DrawerCloseButton, VStack } from '@chakra-ui/react';
 import { HamburgerIcon } from '@chakra-ui/icons';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
-import Login from './pages/Login.jsx';
-import Signup from './pages/Signup.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Coaching from './pages/Coaching.jsx';
 import Microfinance from './pages/Microfinance.jsx';
@@ -19,11 +17,11 @@ import Profile from './pages/Profile.jsx';
 import Investments from './pages/Investments.jsx';
 
 function NavBar() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   
-  const navLinks = user ? [
+  const navLinks = [
     { to: '/dashboard', label: 'Dashboard' },
     { to: '/investments', label: 'Investments' },
     { to: '/wallet', label: 'Wallet' },
@@ -33,11 +31,8 @@ function NavBar() {
     { to: '/real-estate', label: 'Real Estate' },
     { to: '/pension', label: 'Pension' },
     { to: '/fraud', label: 'Fraud' },
-    ...(user.role === 'admin' ? [{ to: '/admin', label: 'Admin' }] : []),
+    ...(user?.role === 'admin' ? [{ to: '/admin', label: 'Admin' }] : []),
     { to: '/profile', label: 'Profile' }
-  ] : [
-    { to: '/login', label: 'Login' },
-    { to: '/signup', label: 'Sign Up' }
   ];
 
   return (
@@ -47,24 +42,14 @@ function NavBar() {
           One-Fourth Finance
         </Heading>
         <Spacer />
-        {user ? (
-          <>
-            <Box display={{ base: 'none', md: 'flex' }}>
-              {navLinks.map(link => (
-                <Button key={link.to} as={Link} to={link.to} variant="ghost" isActive={location.pathname === link.to} size="sm">
-                  {link.label}
-                </Button>
-              ))}
-              <Button ml={2} onClick={logout} colorScheme="blue" size="sm">Logout</Button>
-            </Box>
-            <IconButton display={{ base: 'flex', md: 'none' }} icon={<HamburgerIcon />} onClick={() => setMobileOpen(true)} variant="ghost" />
-          </>
-        ) : (
-          <>
-            <Button as={Link} to="/login" variant="ghost" size="sm">Login</Button>
-            <Button as={Link} to="/signup" variant="solid" colorScheme="blue" size="sm" ml={2}>Sign Up</Button>
-          </>
-        )}
+        <Box display={{ base: 'none', md: 'flex' }}>
+          {navLinks.map(link => (
+            <Button key={link.to} as={Link} to={link.to} variant="ghost" isActive={location.pathname === link.to} size="sm">
+              {link.label}
+            </Button>
+          ))}
+        </Box>
+        <IconButton display={{ base: 'flex', md: 'none' }} icon={<HamburgerIcon />} onClick={() => setMobileOpen(true)} variant="ghost" />
       </Flex>
 
       <Drawer isOpen={mobileOpen} placement="right" onClose={() => setMobileOpen(false)}>
@@ -79,19 +64,12 @@ function NavBar() {
                   {link.label}
                 </Button>
               ))}
-              <Button onClick={logout} colorScheme="red" mt={4} w="full">Logout</Button>
             </VStack>
           </DrawerBody>
         </DrawerContent>
       </Drawer>
     </>
   );
-}
-
-function ProtectedRoute({ children }) {
-  const { user } = useAuth();
-  if (!user) return <Navigate to="/login" replace />;
-  return children;
 }
 
 export default function App() {
@@ -102,20 +80,18 @@ export default function App() {
         <Box p={6}>
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/investments" element={<ProtectedRoute><Investments /></ProtectedRoute>} />
-            <Route path="/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
-            <Route path="/coaching" element={<ProtectedRoute><Coaching /></ProtectedRoute>} />
-            <Route path="/microfinance" element={<ProtectedRoute><Microfinance /></ProtectedRoute>} />
-            <Route path="/credit-risk" element={<ProtectedRoute><CreditRisk /></ProtectedRoute>} />
-            <Route path="/pension" element={<ProtectedRoute><Pension /></ProtectedRoute>} />
-            <Route path="/insurance" element={<ProtectedRoute><Insurance /></ProtectedRoute>} />
-            <Route path="/real-estate" element={<ProtectedRoute><RealEstate /></ProtectedRoute>} />
-            <Route path="/fraud" element={<ProtectedRoute><Fraud /></ProtectedRoute>} />
-            <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/investments" element={<Investments />} />
+            <Route path="/wallet" element={<Wallet />} />
+            <Route path="/coaching" element={<Coaching />} />
+            <Route path="/microfinance" element={<Microfinance />} />
+            <Route path="/credit-risk" element={<CreditRisk />} />
+            <Route path="/pension" element={<Pension />} />
+            <Route path="/insurance" element={<Insurance />} />
+            <Route path="/real-estate" element={<RealEstate />} />
+            <Route path="/fraud" element={<Fraud />} />
+            <Route path="/admin" element={<Admin />} />
+            <Route path="/profile" element={<Profile />} />
           </Routes>
         </Box>
       </Box>
