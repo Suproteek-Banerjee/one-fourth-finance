@@ -111,6 +111,18 @@ export default function Dashboard() {
   useEffect(() => {
     const handleStorageChange = () => {
       setRefreshKey(prev => prev + 1);
+      // Reload data immediately
+      const stored = getStoredInvestments();
+      const updated = stored.map(inv => {
+        if (inv.type === 'stock') {
+          return { ...inv, currentPrice: stockPrices[inv.symbol] || inv.currentPrice || inv.avgPrice };
+        } else if (inv.type === 'crypto') {
+          return { ...inv, currentPrice: cryptoPrices[inv.symbol] || inv.currentPrice || inv.avgPrice };
+        }
+        return inv;
+      });
+      setInvestments(updated);
+      setRealEstateHoldings(getStoredRealEstate());
     };
     window.addEventListener('storage', handleStorageChange);
     // Also listen for custom event (for same-window updates)
@@ -122,17 +134,18 @@ export default function Dashboard() {
       window.removeEventListener('realEstateUpdated', handleStorageChange);
     };
   }, []);
+  
   const portfolioValue = MOCK_DATA.portfolio.value;
   const loansCount = MOCK_DATA.loans.length;
   const policiesCount = MOCK_DATA.policies.length;
   const pensionBalance = MOCK_DATA.pension.balance;
   const alerts = MOCK_DATA.alerts;
   
-  // Calculate investment values
+  // Calculate investment values - recalculated when investments change
   const investmentValue = investments.reduce((sum, inv) => {
-    if (inv.type === 'stock') return sum + (inv.shares * inv.currentPrice);
-    if (inv.type === 'bond') return sum + inv.amount;
-    if (inv.type === 'crypto') return sum + (inv.amount * inv.currentPrice);
+    if (inv.type === 'stock') return sum + ((inv.shares || 0) * (inv.currentPrice || inv.avgPrice || 0));
+    if (inv.type === 'bond') return sum + (inv.amount || 0);
+    if (inv.type === 'crypto') return sum + ((inv.amount || 0) * (inv.currentPrice || inv.avgPrice || 0));
     return sum;
   }, 0);
   

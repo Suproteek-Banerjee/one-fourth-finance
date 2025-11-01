@@ -61,6 +61,7 @@ export default function Investments() {
   const [amount, setAmount] = useState('');
   const [sellId, setSellId] = useState(null);
   const [sellAmount, setSellAmount] = useState('');
+  const [tabIndex, setTabIndex] = useState(0);
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   function buy() {
@@ -70,10 +71,17 @@ export default function Investments() {
     }
     
     // Handle crypto separately since it's singular, not plural
-    const optionKey = selectedType === 'crypto' ? 'crypto' : selectedType + 's';
-    const option = options[optionKey]?.find(opt => opt.symbol === selectedSymbol);
+    let option;
+    if (selectedType === 'crypto') {
+      option = options.crypto?.find(opt => opt.symbol === selectedSymbol);
+    } else if (selectedType === 'bond') {
+      option = options.bonds?.find(opt => opt.symbol === selectedSymbol);
+    } else if (selectedType === 'stock') {
+      option = options.stocks?.find(opt => opt.symbol === selectedSymbol);
+    }
+    
     if (!option) {
-      toast({ title: 'Invalid selection', status: 'error' });
+      toast({ title: 'Invalid selection', status: 'error', description: `Please select a valid ${selectedType}` });
       return;
     }
 
@@ -336,12 +344,18 @@ export default function Investments() {
         </Card>
       )}
 
-      <Tabs mb={8}>
-        <TabList>
-          <Tab onClick={() => setSelectedType('stock')}>Stocks</Tab>
-          <Tab onClick={() => setSelectedType('bond')}>Bonds</Tab>
-          <Tab onClick={() => setSelectedType('crypto')}>Crypto</Tab>
-        </TabList>
+          <Tabs mb={8} index={tabIndex} onChange={(index) => {
+            const types = ['stock', 'bond', 'crypto'];
+            setTabIndex(index);
+            setSelectedType(types[index]);
+            setSelectedSymbol(''); // Reset selection when switching tabs
+            setAmount(''); // Reset amount when switching tabs
+          }}>
+            <TabList>
+              <Tab>Stocks</Tab>
+              <Tab>Bonds</Tab>
+              <Tab>Crypto</Tab>
+            </TabList>
 
         <TabPanels>
           <TabPanel>
