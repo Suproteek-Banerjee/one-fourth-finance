@@ -4,17 +4,57 @@ const AuthContext = createContext(null);
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
 export function AuthProvider({ children }) {
-  // Default user - auto-login without authentication
-  const defaultUser = { id: 'default-user', email: 'investor@off.demo', role: 'investor', name: 'Default User', eduVerified: false };
-  const defaultToken = 'default-token-no-auth';
+  // Default user credentials for auto-login
+  const defaultEmail = 'investor@off.demo';
+  const defaultPassword = 'Investor123!';
 
-  const [user, setUser] = useState(defaultUser);
-  const [token, setToken] = useState(defaultToken);
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Auto-set default user on mount (no login required)
-    setUser(defaultUser);
-    setToken(defaultToken);
+    // Auto-login with default investor credentials on mount
+    async function autoLogin() {
+      try {
+        const saved = localStorage.getItem('off_auth');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setUser(parsed.user);
+          setToken(parsed.token);
+          setLoading(false);
+          return;
+        }
+
+        // Auto-login with default credentials
+        const res = await fetch(`${API_URL}/auth/login`, { 
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' }, 
+          body: JSON.stringify({ email: defaultEmail, password: defaultPassword }) 
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data.user);
+          setToken(data.token);
+          localStorage.setItem('off_auth', JSON.stringify({ user: data.user, token: data.token }));
+        } else {
+          // Fallback: use mock user if API fails
+          const mockUser = { id: 'default-user', email: defaultEmail, role: 'investor', name: 'Investor One', eduVerified: false };
+          const mockToken = 'demo-token';
+          setUser(mockUser);
+          setToken(mockToken);
+        }
+      } catch (err) {
+        // Fallback: use mock user if network fails
+        const mockUser = { id: 'default-user', email: defaultEmail, role: 'investor', name: 'Investor One', eduVerified: false };
+        const mockToken = 'demo-token';
+        setUser(mockUser);
+        setToken(mockToken);
+      } finally {
+        setLoading(false);
+      }
+    }
+    autoLogin();
   }, []);
 
   function saveAuth(u, t) {
@@ -84,7 +124,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, login, signup, logout, API_URL }}>
+    <AuthContext.Provider value={{ user, token, login, signup, logout, API_URL, loading }}>
       {children}
     </AuthContext.Provider>
   );

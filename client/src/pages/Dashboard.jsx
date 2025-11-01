@@ -5,20 +5,40 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { WarningIcon, CheckCircleIcon, ArrowUpIcon, ViewIcon, InfoIcon } from '@chakra-ui/icons';
 
 export default function Dashboard() {
-  const { API_URL, token } = useAuth();
+  const { API_URL, token, loading: authLoading } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
+      // Wait for auth to finish loading before making API call
+      if (authLoading) return;
+      if (!token) {
+        setLoading(false);
+        setData({ portfolio: {}, investments: [], loans: [], policies: [], pension: null, alerts: [] });
+        return;
+      }
       setLoading(true);
-      const res = await fetch(`${API_URL}/dashboard`, { headers: { Authorization: `Bearer ${token}` } });
-      const json = await res.json();
-      setData(json);
-      setLoading(false);
+      try {
+        const res = await fetch(`${API_URL}/dashboard`, { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) {
+          console.error('Dashboard API error:', res.status, res.statusText);
+          // Use empty data if API fails
+          setData({ portfolio: {}, investments: [], loans: [], policies: [], pension: null, alerts: [] });
+        } else {
+          const json = await res.json();
+          setData(json);
+        }
+      } catch (err) {
+        console.error('Dashboard fetch error:', err);
+        // Use empty data if fetch fails
+        setData({ portfolio: {}, investments: [], loans: [], policies: [], pension: null, alerts: [] });
+      } finally {
+        setLoading(false);
+      }
     }
     load();
-  }, [API_URL, token]);
+  }, [API_URL, token, authLoading]);
 
   const investments = data?.investments || [];
   const portfolioValue = data?.portfolio?.value || 0;
