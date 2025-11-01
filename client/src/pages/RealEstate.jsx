@@ -3,31 +3,63 @@ import { Box, Button, Heading, Input, Text, Card, CardBody, CardHeader, SimpleGr
 import { useAuth } from '../context/AuthContext.jsx';
 
 export default function RealEstate() {
-  const { API_URL, token } = useAuth();
+  const { API_URL, token, loading: authLoading } = useAuth();
   const [properties, setProperties] = useState([]);
   const [selected, setSelected] = useState('');
   const [tokens, setTokens] = useState(100);
   const [holdings, setHoldings] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [initialLoad, setInitialLoad] = useState(true);
 
   async function load() {
-    const res = await fetch(`${API_URL}/real-estate/properties`, { headers: { Authorization: `Bearer ${token}` } });
-    setProperties(await res.json());
-    const pf = await fetch(`${API_URL}/real-estate/portfolio`, { headers: { Authorization: `Bearer ${token}` } });
-    const json = await pf.json();
-    setHoldings(json.holdings || []);
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_URL}/real-estate/properties`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        setProperties(await res.json());
+      }
+      const pf = await fetch(`${API_URL}/real-estate/portfolio`, { headers: { Authorization: `Bearer ${token}` } });
+      if (pf.ok) {
+        const json = await pf.json();
+        setHoldings(json.holdings || []);
+      }
+    } catch (err) {
+      console.error('Failed to load real estate data:', err);
+    } finally {
+      setInitialLoad(false);
+    }
   }
 
   async function purchase() {
+    if (!selected || !tokens) return;
     setLoading(true);
-    await fetch(`${API_URL}/real-estate/purchase`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ propertyId: selected, tokens: Number(tokens) }) });
-    await load();
-    setLoading(false);
+    try {
+      const res = await fetch(`${API_URL}/real-estate/purchase`, { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, 
+        body: JSON.stringify({ propertyId: selected, tokens: Number(tokens) }) 
+      });
+      if (res.ok) {
+        await load();
+      }
+    } catch (err) {
+      console.error('Purchase failed:', err);
+    } finally {
+      setLoading(false);
+    }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    if (!authLoading && token) {
+      load();
+    }
+  }, [API_URL, token, authLoading]);
 
   const selectedProperty = properties.find(p => p.id === selected);
+
+  if (authLoading || initialLoad) {
+    return <Box p={8}><Text>Loading...</Text></Box>;
+  }
 
   return (
     <Box p={6}>

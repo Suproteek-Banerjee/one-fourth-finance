@@ -13,7 +13,7 @@ const questions = [
 ];
 
 export default function Coaching() {
-  const { API_URL, token } = useAuth();
+  const { API_URL, token, loading: authLoading } = useAuth();
   const [answers, setAnswers] = useState([2, 2, 2, 2, 2]);
   const [allocation, setAllocation] = useState(null);
   const [sim, setSim] = useState(null);
@@ -27,19 +27,33 @@ export default function Coaching() {
   }
 
   async function assess() {
+    if (!token) return;
     setLoading(true);
-    const res = await fetch(`${API_URL}/coaching/assess`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ answers }) });
-    const data = await res.json();
-    setAllocation(data.allocation);
-    setRiskScore(data.score);
-    setLoading(false);
+    try {
+      const res = await fetch(`${API_URL}/coaching/assess`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ answers }) });
+      if (res.ok) {
+        const data = await res.json();
+        setAllocation(data.allocation);
+        setRiskScore(data.score);
+      }
+    } catch (err) {
+      console.error('Assessment failed:', err);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function simulate() {
-    if (!allocation) return;
-    const res = await fetch(`${API_URL}/coaching/simulate`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ startValue: 10000, months: 24, allocation }) });
-    const data = await res.json();
-    setSim(data);
+    if (!allocation || !token) return;
+    try {
+      const res = await fetch(`${API_URL}/coaching/simulate`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ startValue: 10000, months: 24, allocation }) });
+      if (res.ok) {
+        const data = await res.json();
+        setSim(data);
+      }
+    } catch (err) {
+      console.error('Simulation failed:', err);
+    }
   }
 
   const allocationData = allocation ? [

@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { CheckCircleIcon, BellIcon } from '@chakra-ui/icons';
 
 export default function Insurance() {
-  const { API_URL, token } = useAuth();
+  const { API_URL, token, loading: authLoading } = useAuth();
   const [products, setProducts] = useState([]);
   const [selected, setSelected] = useState('');
   const [quote, setQuote] = useState(null);
@@ -17,14 +17,27 @@ export default function Insurance() {
   const [notifications, setNotifications] = useState([]);
 
   async function load() {
-    const res = await fetch(`${API_URL}/insurance/products`, { headers: { Authorization: `Bearer ${token}` } });
-    setProducts(await res.json());
-    const mine = await fetch(`${API_URL}/insurance/my`, { headers: { Authorization: `Bearer ${token}` } });
-    setMy(await mine.json());
-    const comm = await fetch(`${API_URL}/insurance/communities`, { headers: { Authorization: `Bearer ${token}` } });
-    setCommunities(await comm.json());
-    const notes = await fetch(`${API_URL}/insurance/notifications`, { headers: { Authorization: `Bearer ${token}` } });
-    setNotifications(await notes.json());
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_URL}/insurance/products`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        setProducts(await res.json());
+      }
+      const mine = await fetch(`${API_URL}/insurance/my`, { headers: { Authorization: `Bearer ${token}` } });
+      if (mine.ok) {
+        setMy(await mine.json());
+      }
+      const comm = await fetch(`${API_URL}/insurance/communities`, { headers: { Authorization: `Bearer ${token}` } });
+      if (comm.ok) {
+        setCommunities(await comm.json());
+      }
+      const notes = await fetch(`${API_URL}/insurance/notifications`, { headers: { Authorization: `Bearer ${token}` } });
+      if (notes.ok) {
+        setNotifications(await notes.json());
+      }
+    } catch (err) {
+      console.error('Failed to load insurance data:', err);
+    }
   }
 
   async function getQuote() {
@@ -37,7 +50,11 @@ export default function Insurance() {
     await load();
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    if (!authLoading && token) {
+      load();
+    }
+  }, [API_URL, token, authLoading]);
 
   return (
     <Box p={6}>

@@ -3,7 +3,7 @@ import { Box, Button, Heading, Input, Text, Card, CardBody, CardHeader, SimpleGr
 import { useAuth } from '../context/AuthContext.jsx';
 
 export default function Microfinance() {
-  const { API_URL, token } = useAuth();
+  const { API_URL, token, loading: authLoading } = useAuth();
   const toast = useToast();
   const [amount, setAmount] = useState(1000);
   const [income, setIncome] = useState(1200);
@@ -31,19 +31,37 @@ export default function Microfinance() {
   }
 
   async function loadMy() {
-    const res = await fetch(`${API_URL}/microfinance/my-loans`, { headers: { Authorization: `Bearer ${token}` } });
-    const data = await res.json();
-    setMyLoans(data);
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_URL}/microfinance/my-loans`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setMyLoans(data);
+      }
+    } catch (err) {
+      console.error('Failed to load loans:', err);
+    }
   }
 
   async function viewSchedule(loanId) {
-    const res = await fetch(`${API_URL}/microfinance/repayment-schedule/${loanId}`, { headers: { Authorization: `Bearer ${token}` } });
-    const data = await res.json();
-    setSchedule(data.schedule);
-    onOpen();
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_URL}/microfinance/repayment-schedule/${loanId}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setSchedule(data.schedule);
+        onOpen();
+      }
+    } catch (err) {
+      console.error('Failed to load schedule:', err);
+    }
   }
 
-  useEffect(() => { loadMy(); }, []);
+  useEffect(() => {
+    if (!authLoading && token) {
+      loadMy();
+    }
+  }, [API_URL, token, authLoading]);
 
   return (
     <Box p={6}>

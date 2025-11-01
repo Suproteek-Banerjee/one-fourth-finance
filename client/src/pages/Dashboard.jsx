@@ -80,6 +80,28 @@ export default function Dashboard() {
     { name: 'Bonds', value: Math.round(allocationPercent.bonds * 100), color: '#00C49F' },
     { name: 'Crypto', value: Math.round(allocationPercent.crypto * 100), color: '#FF8042' }
   ].filter(item => item.value > 0);
+  
+  // Add portfolio allocation if available
+  const portfolioAllocation = data?.portfolio?.allocation || {};
+  if (portfolioAllocation.stocks && !allocationPercent.stocks) {
+    allocationPercent.stocks = portfolioAllocation.stocks;
+  }
+  if (portfolioAllocation.bonds && !allocationPercent.bonds) {
+    allocationPercent.bonds = portfolioAllocation.bonds;
+  }
+  if (portfolioAllocation.crypto && !allocationPercent.crypto) {
+    allocationPercent.crypto = portfolioAllocation.crypto;
+  }
+  if (portfolioAllocation.realEstate) {
+    allocationPercent.realEstate = portfolioAllocation.realEstate;
+  }
+  
+  const fullPieData = [
+    { name: 'Stocks', value: Math.round(allocationPercent.stocks * 100), color: '#0088FE' },
+    { name: 'Bonds', value: Math.round(allocationPercent.bonds * 100), color: '#00C49F' },
+    { name: 'Crypto', value: Math.round(allocationPercent.crypto * 100), color: '#FF8042' },
+    { name: 'Real Estate', value: Math.round((allocationPercent.realEstate || 0) * 100), color: '#FFBB28' }
+  ].filter(item => item.value > 0);
 
   const monthlyData = [
     { month: 'Jan', value: 22000 },
@@ -178,11 +200,11 @@ export default function Dashboard() {
             <Heading size="md">Portfolio Allocation</Heading>
           </CardHeader>
           <CardBody>
-            {pieData.some(d => d.value > 0) ? (
+            {fullPieData.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie 
-                    data={pieData} 
+                    data={fullPieData} 
                     cx="50%" 
                     cy="50%" 
                     innerRadius={70}
@@ -192,11 +214,12 @@ export default function Dashboard() {
                     paddingAngle={5}
                     label={({name, value}) => value > 0 ? `${name}: ${value}%` : ''}
                   >
-                    {pieData.map((entry, index) => (
+                    {fullPieData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
                   <Tooltip formatter={(value) => `${value}%`} />
+                  <Legend />
                 </PieChart>
               </ResponsiveContainer>
             ) : (

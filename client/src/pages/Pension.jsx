@@ -5,7 +5,7 @@ import { ResponsiveContainer, AreaChart, Area, LineChart, Line, CartesianGrid, X
 import { ViewIcon, ArrowUpIcon, CheckCircleIcon, InfoIcon } from '@chakra-ui/icons';
 
 export default function Pension() {
-  const { API_URL, token } = useAuth();
+  const { API_URL, token, loading: authLoading } = useAuth();
   const toast = useToast();
   const [account, setAccount] = useState(null);
   const [amount, setAmount] = useState(100);
@@ -13,13 +13,16 @@ export default function Pension() {
   const [loading, setLoading] = useState(false);
 
   async function load() {
+    if (!token) return;
     setLoading(true);
     try {
       const res = await fetch(`${API_URL}/pension/account`, { headers: { Authorization: `Bearer ${token}` } });
-      const data = await res.json();
-      setAccount(data);
+      if (res.ok) {
+        const data = await res.json();
+        setAccount(data);
+      }
     } catch (err) {
-      toast({ title: 'Failed to load account', status: 'error' });
+      console.error('Failed to load account:', err);
     } finally {
       setLoading(false);
     }
@@ -50,12 +53,23 @@ export default function Pension() {
   }
 
   async function simulate() {
-    const res = await fetch(`${API_URL}/pension/simulate`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ months: 24 }) });
-    const data = await res.json();
-    setSim(data);
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_URL}/pension/simulate`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ months: 24 }) });
+      if (res.ok) {
+        const data = await res.json();
+        setSim(data);
+      }
+    } catch (err) {
+      console.error('Simulation failed:', err);
+    }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    if (!authLoading && token) {
+      load();
+    }
+  }, [API_URL, token, authLoading]);
 
   const simData = sim ? sim.history.map((h, idx) => ({ month: h.month, value: h.value })) : [];
   const projectedGrowth = sim ? sim.finalValue - (account?.balance || 0) : 0;

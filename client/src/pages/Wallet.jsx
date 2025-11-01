@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { ViewIcon, ArrowDownIcon, ArrowUpIcon, ArrowForwardIcon } from '@chakra-ui/icons';
 
 export default function Wallet() {
-  const { API_URL, token } = useAuth();
+  const { API_URL, token, loading: authLoading } = useAuth();
   const toast = useToast();
   const [wallet, setWallet] = useState(null);
   const [transactions, setTransactions] = useState([]);
@@ -19,10 +19,19 @@ export default function Wallet() {
   const [loading, setLoading] = useState(false);
 
   async function load() {
-    const res = await fetch(`${API_URL}/wallet`, { headers: { Authorization: `Bearer ${token}` } });
-    setWallet(await res.json());
-    const txs = await fetch(`${API_URL}/wallet/transactions`, { headers: { Authorization: `Bearer ${token}` } });
-    setTransactions(await txs.json());
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_URL}/wallet`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        setWallet(await res.json());
+      }
+      const txs = await fetch(`${API_URL}/wallet/transactions`, { headers: { Authorization: `Bearer ${token}` } });
+      if (txs.ok) {
+        setTransactions(await txs.json());
+      }
+    } catch (err) {
+      console.error('Failed to load wallet:', err);
+    }
   }
 
   async function deposit() {
@@ -87,9 +96,13 @@ export default function Wallet() {
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    if (!authLoading && token) {
+      load();
+    }
+  }, [API_URL, token, authLoading]);
 
-  if (!wallet) return <Box p={8}><Text>Loading...</Text></Box>;
+  if (authLoading || !wallet) return <Box p={8}><Text>Loading...</Text></Box>;
 
   const totalValue = (wallet.balances?.USDC || 0) * 1 + 
                      (wallet.balances?.BTC || 0) * 45000 + 

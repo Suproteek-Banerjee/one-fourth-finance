@@ -5,7 +5,7 @@ import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recha
 import { ArrowUpIcon, ArrowDownIcon } from '@chakra-ui/icons';
 
 export default function Investments() {
-  const { API_URL, token } = useAuth();
+  const { API_URL, token, loading: authLoading } = useAuth();
   const toast = useToast();
   const [options, setOptions] = useState({ stocks: [], bonds: [], crypto: [] });
   const [investments, setInvestments] = useState([]);
@@ -18,13 +18,18 @@ export default function Investments() {
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   async function load() {
+    if (!token) return;
     try {
       const opts = await fetch(`${API_URL}/investments/options`);
-      setOptions(await opts.json());
+      if (opts.ok) {
+        setOptions(await opts.json());
+      }
       
       const invs = await fetch(`${API_URL}/investments`, { headers: { Authorization: `Bearer ${token}` } });
-      const data = await invs.json();
-      setInvestments(data.investments || []);
+      if (invs.ok) {
+        const data = await invs.json();
+        setInvestments(data.investments || []);
+      }
     } catch (err) {
       console.error('Failed to load investments:', err);
     }
@@ -97,7 +102,11 @@ export default function Investments() {
     onOpen();
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    if (!authLoading && token) {
+      load();
+    }
+  }, [API_URL, token, authLoading]);
 
   const totalValue = investments.reduce((sum, inv) => {
     if (inv.type === 'stock') return sum + (inv.shares * inv.currentPrice);

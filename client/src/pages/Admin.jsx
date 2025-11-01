@@ -3,18 +3,30 @@ import { Box, Heading, SimpleGrid, Stat, StatLabel, StatNumber, StatHelpText, Ca
 import { useAuth } from '../context/AuthContext.jsx';
 
 export default function Admin() {
-  const { API_URL, token } = useAuth();
+  const { API_URL, token, loading: authLoading } = useAuth();
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
-      const res = await fetch(`${API_URL}/admin/metrics`, { headers: { Authorization: `Bearer ${token}` } });
-      setMetrics(await res.json());
+      if (!token) return;
+      try {
+        const res = await fetch(`${API_URL}/admin/metrics`, { headers: { Authorization: `Bearer ${token}` } });
+        if (res.ok) {
+          setMetrics(await res.json());
+        }
+      } catch (err) {
+        console.error('Failed to load metrics:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    if (!authLoading && token) {
+      load();
+    } else if (!authLoading) {
       setLoading(false);
     }
-    load();
-  }, [API_URL, token]);
+  }, [API_URL, token, authLoading]);
 
   if (loading) {
     return <Box p={8}><Text>Loading...</Text></Box>;

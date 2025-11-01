@@ -4,28 +4,47 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { WarningIcon } from '@chakra-ui/icons';
 
 export default function Fraud() {
-  const { API_URL, token } = useAuth();
+  const { API_URL, token, loading: authLoading } = useAuth();
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(false);
 
   async function simulate() {
+    if (!token) return;
     setLoading(true);
-    const sample = [
-      { id: 'tx1', amount: 15000, country: 'home', retries: 0 },
-      { id: 'tx2', amount: 2500, country: 'abroad', retries: 1 },
-      { id: 'tx3', amount: 100, country: 'home', retries: 5 }
-    ];
-    await fetch(`${API_URL}/fraud/simulate`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ transactions: sample }) });
-    await load();
-    setLoading(false);
+    try {
+      const sample = [
+        { id: 'tx1', amount: 15000, country: 'home', retries: 0 },
+        { id: 'tx2', amount: 2500, country: 'abroad', retries: 1 },
+        { id: 'tx3', amount: 100, country: 'home', retries: 5 }
+      ];
+      const res = await fetch(`${API_URL}/fraud/simulate`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ transactions: sample }) });
+      if (res.ok) {
+        await load();
+      }
+    } catch (err) {
+      console.error('Simulation failed:', err);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function load() {
-    const res = await fetch(`${API_URL}/fraud/alerts`, { headers: { Authorization: `Bearer ${token}` } });
-    setAlerts(await res.json());
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_URL}/fraud/alerts`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        setAlerts(await res.json());
+      }
+    } catch (err) {
+      console.error('Failed to load alerts:', err);
+    }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    if (!authLoading && token) {
+      load();
+    }
+  }, [API_URL, token, authLoading]);
 
   const getColorScheme = (level) => {
     if (level === 'high') return 'red';

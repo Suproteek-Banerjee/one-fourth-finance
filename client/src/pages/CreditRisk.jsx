@@ -3,7 +3,7 @@ import { Box, Button, Heading, Input, SimpleGrid, Stat, StatLabel, StatNumber, T
 import { useAuth } from '../context/AuthContext.jsx';
 
 export default function CreditRisk() {
-  const { API_URL, token } = useAuth();
+  const { API_URL, token, loading: authLoading } = useAuth();
   const [income, setIncome] = useState(3000);
   const [debts, setDebts] = useState(500);
   const [assets, setAssets] = useState(10000);
@@ -12,11 +12,19 @@ export default function CreditRisk() {
   const [loading, setLoading] = useState(false);
 
   async function score() {
+    if (!token) return;
     setLoading(true);
-    const res = await fetch(`${API_URL}/credit-risk/score`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ income: Number(income), debts: Number(debts), assets: Number(assets), expenses: Number(expenses) }) });
-    const data = await res.json();
-    setResult(data);
-    setLoading(false);
+    try {
+      const res = await fetch(`${API_URL}/credit-risk/score`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ income: Number(income), debts: Number(debts), assets: Number(assets), expenses: Number(expenses) }) });
+      if (res.ok) {
+        const data = await res.json();
+        setResult(data);
+      }
+    } catch (err) {
+      console.error('Credit risk calculation failed:', err);
+    } finally {
+      setLoading(false);
+    }
   }
 
   const riskColor = result ? (result.score >= 750 ? 'green' : result.score >= 650 ? 'yellow' : 'red') : 'gray';
