@@ -60,6 +60,15 @@ const getStoredRealEstate = () => {
   return [];
 };
 
+// Get pension from localStorage
+const getStoredPension = () => {
+  try {
+    const stored = localStorage.getItem('off_pension');
+    if (stored) return JSON.parse(stored);
+  } catch (e) {}
+  return { balance: 5000, monthlyContribution: 200, apy: 0.08 };
+};
+
 export default function Dashboard() {
   const location = useLocation();
   const [refreshKey, setRefreshKey] = useState(0);
@@ -107,6 +116,13 @@ export default function Dashboard() {
     setRealEstateHoldings(getStoredRealEstate());
   }, [refreshKey]);
 
+  // Get pension data
+  const [pension, setPension] = useState(() => getStoredPension());
+  
+  useEffect(() => {
+    setPension(getStoredPension());
+  }, [refreshKey]);
+
   // Listen for storage changes (when investments are updated)
   useEffect(() => {
     const handleStorageChange = () => {
@@ -123,22 +139,25 @@ export default function Dashboard() {
       });
       setInvestments(updated);
       setRealEstateHoldings(getStoredRealEstate());
+      setPension(getStoredPension());
     };
     window.addEventListener('storage', handleStorageChange);
     // Also listen for custom event (for same-window updates)
     window.addEventListener('investmentUpdated', handleStorageChange);
     window.addEventListener('realEstateUpdated', handleStorageChange);
+    window.addEventListener('pensionUpdated', handleStorageChange);
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('investmentUpdated', handleStorageChange);
       window.removeEventListener('realEstateUpdated', handleStorageChange);
+      window.removeEventListener('pensionUpdated', handleStorageChange);
     };
   }, []);
   
   const portfolioValue = MOCK_DATA.portfolio.value;
   const loansCount = MOCK_DATA.loans.length;
   const policiesCount = MOCK_DATA.policies.length;
-  const pensionBalance = MOCK_DATA.pension.balance;
+  const pensionBalance = pension?.balance || 5000;
   const alerts = MOCK_DATA.alerts;
   
   // Calculate investment values - recalculated when investments change
