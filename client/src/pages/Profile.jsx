@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Box, Heading, Card, CardBody, CardHeader, SimpleGrid, Text, Input, Button, VStack, HStack, Badge, Avatar, useToast, Stat, StatLabel, StatNumber, StatHelpText, Progress, Select } from '@chakra-ui/react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
